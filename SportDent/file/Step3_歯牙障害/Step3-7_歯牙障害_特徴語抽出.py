@@ -14,6 +14,7 @@ from pathlib import Path
 import sys
 import time
 import pandas as pd
+import unicodedata
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
@@ -27,11 +28,53 @@ OUTPUT_DIR = PROJECT_ROOT / "CreateData" / "Step3_歯牙障害"
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-INPUT_ORIGINAL = (
-    PROJECT_ROOT / "CreateData" / "Step2_傷害カテゴリ別解析"
-    / "カテゴリ別抽出データ"
-    / "Step2-1_傷害カテゴリ別解析_歯牙障害抽出.csv"
+EXPECTED_INPUT_NAME = (
+    "Step2-1_傷害カテゴリ別解析_歯牙障害抽出.csv"
 )
+
+EXPECTED_INPUT_NAME_NFC = unicodedata.normalize(
+    "NFC",
+    EXPECTED_INPUT_NAME,
+)
+
+INPUT_CANDIDATES = [
+    path
+    for path in (
+        PROJECT_ROOT
+        / "CreateData"
+    ).rglob("*.csv")
+    if unicodedata.normalize(
+        "NFC",
+        path.name,
+    ) == EXPECTED_INPUT_NAME_NFC
+]
+
+if len(INPUT_CANDIDATES) == 1:
+    INPUT_ORIGINAL = INPUT_CANDIDATES[0]
+
+elif len(INPUT_CANDIDATES) == 0:
+    raise FileNotFoundError(
+        "歯牙障害抽出CSVが見つかりません。"
+        f"検索開始位置: {PROJECT_ROOT / 'CreateData'}"
+    )
+
+else:
+    raise RuntimeError(
+        "歯牙障害抽出CSVが複数見つかりました。"
+        f"候補: {[str(path) for path in INPUT_CANDIDATES]}"
+    )
+
+if len(INPUT_CANDIDATES) == 1:
+    INPUT_ORIGINAL = INPUT_CANDIDATES[0]
+elif len(INPUT_CANDIDATES) == 0:
+    raise FileNotFoundError(
+        f"歯牙障害抽出CSVが見つかりません: {INPUT_DIR}"
+    )
+else:
+    raise RuntimeError(
+        f"歯牙障害抽出CSVが複数見つかりました: {INPUT_CANDIDATES}"
+    )
+
 INPUT_CLEAN = OUTPUT_DIR / "Step3-5_歯牙障害_ストップワード除去.csv"
 INPUT_CLASSIFIED = OUTPUT_DIR / "Step3-6_歯牙障害_カテゴリ分類.csv"
 INPUT_CASE_CATEGORY = OUTPUT_DIR / "Step3-6_歯牙障害_事例別カテゴリ.csv"

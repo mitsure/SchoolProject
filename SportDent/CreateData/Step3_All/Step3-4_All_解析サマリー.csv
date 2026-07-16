@@ -1,5 +1,5 @@
 ﻿項目,値
-入力ファイル,/workspaces/Meikai/CreateData/Step3_All/Step3-1_All_形態素解析.csv
+入力ファイル,/workspaces/SchoolProject/SportDent/CreateData/Step3_All/Step3-1_All_形態素解析.csv
 入力形態素数,382913
 入力事例数,7682
 共起分析対象形態素数,205571
@@ -8,6 +8,6 @@
 最小共起事例数,5
 出力共起組数,72451
 上位出力件数,500
-処理時間（秒）,14.196
+処理時間（秒）,16.017
 ジャッカード係数,使用しない
 次のStep,Step3-5_All_ストップワード除去.py

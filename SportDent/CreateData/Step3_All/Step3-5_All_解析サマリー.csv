@@ -1,6 +1,6 @@
 ﻿項目,値
-入力ファイル,/workspaces/Meikai/CreateData/Step3_All/Step3-1_All_形態素解析.csv
-ストップワードファイル,/workspaces/Meikai/file/Common/Config/設定_ストップワード.txt
+入力ファイル,/workspaces/SchoolProject/SportDent/CreateData/Step3_All/Step3-1_All_形態素解析.csv
+ストップワードファイル,/workspaces/SchoolProject/SportDent/file/Common/Config/設定_ストップワード.txt
 登録ストップワード数,35
 入力形態素数,382913
 対象形態素数,205571
@@ -15,6 +15,6 @@
 除去後語数0の事例数,0
 実際に除去された異なり語数,35
 残存異なり語数,7233
-処理時間（秒）,7.899
+処理時間（秒）,8.037
 ジャッカード係数,使用しない
 次のStep,Step3-6_All_カテゴリ分類.py

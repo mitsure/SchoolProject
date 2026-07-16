@@ -1,5 +1,5 @@
 ﻿項目,値
-入力ファイル,/workspaces/Meikai/CreateData/Step3_All/Step3-1_All_形態素解析.csv
+入力ファイル,/workspaces/SchoolProject/SportDent/CreateData/Step3_All/Step3-1_All_形態素解析.csv
 入力形態素数,382913
 入力事例数,7682
 集計対象形態素数,205571
@@ -14,6 +14,6 @@
 形容詞出現回数,1677
 対象形態素割合（％）,53.6861
 品詞別上位抽出数,100
-処理時間（秒）,1.644
+処理時間（秒）,1.32
 ジャッカード係数,使用しない
 次のStep,Step3-4_All_共起語解析.py

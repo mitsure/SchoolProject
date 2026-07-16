@@ -83,6 +83,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 import time
+import unicodedata
 
 import pandas as pd
 from janome.tokenizer import Tokenizer
@@ -95,6 +96,7 @@ from janome.tokenizer import Tokenizer
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
 
+
 sys.path.insert(0, str(PROJECT_ROOT / "file"))
 
 from Common.Utils.csv_reader import load_csv
@@ -106,13 +108,64 @@ from Common.Utils.validation import require_columns
 # 基本設定
 # ------------------------------------------------------------------------------
 
-INPUT_CSV = (
-    PROJECT_ROOT
-    / "CreateData"
-    / "Step2_傷害カテゴリ別解析"
-    / "カテゴリ別抽出データ"
-    / "Step2-1_傷害カテゴリ別解析_歯牙障害抽出.csv"
+def find_normalized_child(
+    parent: Path,
+    expected_name: str,
+) -> Path:
+    """
+    Unicode正規化後の名前で子ファイル・子フォルダを探す。
+
+    ZIP展開やOSの違いにより、日本語名がNFC・NFDで
+    異なっていても同じ名前として取得する。
+    """
+    if not parent.exists():
+        raise FileNotFoundError(
+            f"親フォルダが見つかりません: {parent}"
+        )
+
+    expected_normalized = unicodedata.normalize(
+        "NFC",
+        expected_name,
+    )
+
+    matches = [
+        child
+        for child in parent.iterdir()
+        if unicodedata.normalize(
+            "NFC",
+            child.name,
+        ) == expected_normalized
+    ]
+
+    if len(matches) == 1:
+        return matches[0]
+
+    if len(matches) == 0:
+        raise FileNotFoundError(
+            f"対象が見つかりません: {parent / expected_name}"
+        )
+
+    raise RuntimeError(
+        "同名候補が複数見つかりました。"
+        f"候補: {[str(path) for path in matches]}"
+    )
+
+
+STEP2_DIR = find_normalized_child(
+    PROJECT_ROOT / "CreateData",
+    "Step2_傷害カテゴリ別解析",
 )
+
+EXTRACT_DIR = find_normalized_child(
+    STEP2_DIR,
+    "カテゴリ別抽出データ",
+)
+
+INPUT_CSV = find_normalized_child(
+    EXTRACT_DIR,
+    "Step2-1_傷害カテゴリ別解析_歯牙障害抽出.csv",
+)
+
 
 OUTPUT_DIR = PROJECT_ROOT / "CreateData" / "Step3_歯牙障害"
 

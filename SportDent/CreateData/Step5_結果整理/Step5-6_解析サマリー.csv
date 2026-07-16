@@ -2,5 +2,6 @@
 作成Figure数,4
 出力形式,PNG・SVG・PDF
 指定フォント,HeiseiMin-W3
-処理時間(秒),13.615
+使用フォントファイル,/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc
+処理時間(秒),12.801
 次のStep,Step5-7_考察支援データ作成.py

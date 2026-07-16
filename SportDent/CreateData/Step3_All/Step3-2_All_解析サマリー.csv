@@ -1,5 +1,5 @@
 ﻿項目,値
-入力ファイル,/workspaces/Meikai/CreateData/Step3_All/Step3-1_All_形態素解析.csv
+入力ファイル,/workspaces/SchoolProject/SportDent/CreateData/Step3_All/Step3-1_All_形態素解析.csv
 入力形態素数,382913
 対象事例数,7682
 品詞大分類数,13
@@ -9,6 +9,6 @@
 形容詞件数,1677
 名詞・動詞・形容詞合計,205571
 名詞・動詞・形容詞割合（％）,53.6861
-処理時間（秒）,7.73
+処理時間（秒）,1.038
 ジャッカード係数,使用しない
 次のStep,Step3-3_All_頻出語集計.py
