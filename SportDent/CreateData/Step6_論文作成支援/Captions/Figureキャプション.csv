@@ -1,0 +1,5 @@
+﻿Figure番号,図題,キャプション案
+Figure1,歯牙障害特徴語Top20,Figure1. 歯牙障害特徴語Top20。図中の値はStep5で整理した解析結果に基づく。
+Figure2,歯牙障害特徴カテゴリTop20,Figure2. 歯牙障害特徴カテゴリTop20。図中の値はStep5で整理した解析結果に基づく。
+Figure3,歯牙障害Jaccard上位ペア,Figure3. 歯牙障害Jaccard上位ペア。図中の値はStep5で整理した解析結果に基づく。
+Figure4,歯牙障害事故パターンTop15,Figure4. 歯牙障害事故パターンTop15。図中の値はStep5で整理した解析結果に基づく。

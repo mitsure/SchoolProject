@@ -1,0 +1,42 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Step3_All">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="元CSV&#xa;災害発生時の状況" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="Step3-1&#xa;形態素解析" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="420" y="150" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="Step3-2&#xa;品詞集計" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="240" y="270" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="Step3-3&#xa;頻出語集計" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="620" y="270" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="Step3-4&#xa;共起語解析" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="420" y="390" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="Step3-5&#xa;ストップワード除去" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="420" y="500" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="8" value="Step3-6&#xa;カテゴリ分類" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="240" y="620" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="9" value="Step3-7&#xa;特徴語抽出" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=HeiseiMin-W3;" vertex="1" parent="1">
+          <mxGeometry x="620" y="620" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="2" target="3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="3" target="4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="3" target="5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="4" target="6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="5" target="6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="6" target="7"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="7" target="8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="7" target="9"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

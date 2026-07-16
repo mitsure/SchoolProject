@@ -1,0 +1,10 @@
+﻿Table番号,表題,元ファイル,論文用ファイル,掲載行数
+Table1,All vs 歯牙障害 頻出語比較,Table1_All_vs歯牙障害_頻出語比較.csv,論文用_Table1_All_vs歯牙障害_頻出語比較.csv,30
+Table2,All vs 歯牙障害 特徴語比較,Table2_All_vs歯牙障害_特徴語比較.csv,論文用_Table2_All_vs歯牙障害_特徴語比較.csv,30
+Table3,All vs 歯牙障害 カテゴリ比較,Table3_All_vs歯牙障害_カテゴリ比較.csv,論文用_Table3_All_vs歯牙障害_カテゴリ比較.csv,30
+Table4,歯牙障害 特徴語ランキング,Table4_歯牙障害特徴語ランキング.csv,論文用_Table4_歯牙障害特徴語ランキング.csv,30
+Table5,歯牙障害 特徴カテゴリランキング,Table5_歯牙障害特徴カテゴリランキング.csv,論文用_Table5_歯牙障害特徴カテゴリランキング.csv,15
+Table6,Jaccard上位ペア,Table6_Jaccard上位ペア.csv,論文用_Table6_Jaccard上位ペア.csv,30
+Table7,歯牙障害 Jaccard上位ペア,Table7_歯牙障害_Jaccard上位ペア.csv,論文用_Table7_歯牙障害_Jaccard上位ペア.csv,30
+Table8,歯牙障害 事故パターンランキング,Table8_歯牙障害_事故パターンランキング.csv,論文用_Table8_歯牙障害_事故パターンランキング.csv,20
+Table9,歯牙障害 パターン構成要素,Table9_歯牙障害_パターン構成要素.csv,論文用_Table9_歯牙障害_パターン構成要素.csv,20
