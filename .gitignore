@@ -1,0 +1,10 @@
+# 原文・内部ID・人手レビューを含む非公開データ
+SportDent/CreateData/Step11_通学中臨床レビュー/InternalReview/
+SportDent/CreateData/Step11_通学中臨床レビュー/Internal_DoNotPublish/
+SportDent/CreateData/Step9_感度分析/Internal_DoNotPublish/
+SportDent/CreateData/Step12_投稿準備/Internal_DoNotPublish/
+SportDent/CreateData/RegenerationBackups/
+
+# Pythonの一時生成物
+__pycache__/
+*.pyc

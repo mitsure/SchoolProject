@@ -1,0 +1,10 @@
+rule_id,対象項目,前提項目,演算子,前提値,追加条件,不成立時の扱い,根拠
+COMMUTE_001,通学方法,場合別1,equals,通学中,原文に事故時の通学手段として明記,not_applicable,"全7,682件で通学方法の非欠損590件は全て通学中"
+SPORT_001,競技種目,場合別2,in,体育的部活動|体育（保健体育）|競技大会・球技大会|体育的クラブ活動,本人が事故時にその競技を行っていたことが原文から分かる,not_applicable,"全7,682件で競技種目の非欠損3,923件は全てこの4分類"
+PLAY_001,遊具等,なし,explicit_use,なし,対象者が事故時に当該遊具を使用していたことを示す連続根拠がある,not_mentioned,近接・衝突だけを利用とみなすかは公式定義確認待ち
+CASE_001,場合別1,場合別2,hierarchy_lookup,02_上下位カテゴリ対応表.csv,公式対応が一意で下位値がexplicit,validation_rejected,下位から上位への派生規則
+CASE_002,場合別2,場合別1,in,保育中|寄宿舎にあるとき,構造的に下位項目を持たない,not_applicable,観測データでは全403件がこの2分類
+PLACE_001,発生場所1,発生場所2,hierarchy_lookup,02_上下位カテゴリ対応表.csv,公式対応が一意で下位値がexplicit,validation_rejected,下位から上位への派生規則
+PLACE_002,発生場所1|発生場所2,なし,context_pair,なし,学校内外と具体場所の両方が整合する,ambiguous,体育館・運動場等の学校内外誤判定を防止
+EVIDENCE_001,全項目,災害発生時の状況,substring,なし,evidence_startとevidence_endが原文の連続部分文字列に完全一致,validation_rejected,LLMが根拠文字列を生成することを防止
+ERROR_001,全項目,処理状態,equals,success,API・JSON Schema・辞書・検証処理が全て成功,processing_status=error・fields空・保存停止,処理障害と判定不能を分離

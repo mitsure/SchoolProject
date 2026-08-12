@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sportdent.local/schemas/structured-extraction-v1.0.1.json",
+  "title": "SportDent structured extraction result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "processing_status", "input_hash", "error_code", "fields"],
+  "properties": {
+    "schema_version": {"const": "1.0.1"},
+    "processing_status": {"enum": ["success", "error"]},
+    "input_hash": {"type": "string", "minLength": 1},
+    "error_code": {"type": ["string", "null"]},
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "場合別1": {"$ref": "#/$defs/fieldResult"},
+        "場合別2": {"$ref": "#/$defs/fieldResult"},
+        "発生場所1": {"$ref": "#/$defs/fieldResult"},
+        "発生場所2": {"$ref": "#/$defs/fieldResult"},
+        "競技種目": {"$ref": "#/$defs/fieldResult"},
+        "通学方法": {"$ref": "#/$defs/fieldResult"},
+        "遊具等": {"$ref": "#/$defs/fieldResult"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"processing_status": {"const": "success"}}},
+      "then": {
+        "properties": {
+          "error_code": {"type": "null"},
+          "fields": {
+            "required": ["場合別1", "場合別2", "発生場所1", "発生場所2", "競技種目", "通学方法"]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"processing_status": {"const": "error"}}},
+      "then": {
+        "properties": {
+          "error_code": {"type": "string", "minLength": 1},
+          "fields": {"maxProperties": 0}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "fieldResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "status",
+        "reason_code",
+        "evidence_text",
+        "evidence_start",
+        "evidence_end",
+        "provenance",
+        "derived_from",
+        "rule_id",
+        "validator_status"
+      ],
+      "properties": {
+        "value": {"type": ["string", "null"]},
+        "status": {
+          "enum": [
+            "explicit",
+            "derived",
+            "not_mentioned",
+            "ambiguous",
+            "conflict",
+            "unsupported",
+            "validation_rejected",
+            "not_applicable"
+          ]
+        },
+        "reason_code": {"type": ["string", "null"]},
+        "evidence_text": {"type": ["string", "null"]},
+        "evidence_start": {"type": ["integer", "null"], "minimum": 0},
+        "evidence_end": {"type": ["integer", "null"], "minimum": 0},
+        "provenance": {
+          "enum": [
+            "llm_explicit",
+            "synonym_rule",
+            "derived_hierarchy",
+            "user_corrected",
+            "none"
+          ]
+        },
+        "derived_from": {"type": ["string", "null"]},
+        "rule_id": {"type": ["string", "null"]},
+        "validator_status": {"enum": ["passed", "rejected", "not_run"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"enum": ["explicit", "derived"]}}},
+          "then": {
+            "properties": {
+              "value": {"type": "string", "minLength": 1},
+              "evidence_text": {"type": "string", "minLength": 1},
+              "evidence_start": {"type": "integer", "minimum": 0},
+              "evidence_end": {"type": "integer", "minimum": 1},
+              "validator_status": {"const": "passed"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "explicit"}}},
+          "then": {
+            "properties": {
+              "provenance": {"enum": ["llm_explicit", "synonym_rule", "user_corrected"]},
+              "derived_from": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "derived"}}},
+          "then": {
+            "properties": {
+              "provenance": {"const": "derived_hierarchy"},
+              "derived_from": {"type": "string", "minLength": 1},
+              "rule_id": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "not_mentioned",
+                  "ambiguous",
+                  "conflict",
+              "unsupported",
+              "validation_rejected",
+              "not_applicable"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {"type": "null"},
+              "reason_code": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

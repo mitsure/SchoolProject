@@ -22,6 +22,7 @@ python file/Step6_論文作成支援/Step6-3_Discussion候補作成.py
 python file/Step6_論文作成支援/Step6-4_抄録下書き作成.py
 python file/Step6_論文作成支援/Step6-5_Table_Figureキャプション作成.py
 python file/Step6_論文作成支援/Step6-6_論文構成案作成.py
+python file/Step6_論文作成支援/Step6-7_Step7_8追加解析反映.py
 ```
 
 ## 出力先
@@ -61,6 +62,10 @@ TableおよびFigureのキャプション案を作る。
 
 ### Step6-6
 各下書きを統合し、論文構成案と完成チェックリストを作る。
+
+### Step6-7
+既存のStep6下書きを上書きせず、Step7探索的解析とStep8多変量解析を反映した
+Methods・Results・Discussion・改訂抄録の追補案と数値根拠CSVを作成する。
 
 ## 重要な注意
 
