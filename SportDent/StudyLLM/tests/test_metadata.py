@@ -24,6 +24,12 @@ class DemographicsTest(unittest.TestCase):
         self.assertEqual(result["被災学校種"], "小")
         self.assertEqual(result["被災学年"], "3")
 
+    def test_full_school_name_and_subject_sex_are_candidates(self):
+        result = infer_demographics("中学校2年生の男子生徒が、自転車で登校中に転倒した。")
+        self.assertEqual(result["被災学校種"], "中")
+        self.assertEqual(result["被災学年"], "2")
+        self.assertEqual(result["性別"], "男")
+
 
 if __name__ == "__main__":
     unittest.main()

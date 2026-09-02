@@ -29,6 +29,8 @@ class OllamaClientTest(unittest.TestCase):
         body = json.loads(request.data)
         self.assertEqual(request.full_url, "http://127.0.0.1:11434/api/chat")
         self.assertFalse(body["stream"])
+        self.assertFalse(body["think"])
+        self.assertEqual(body["keep_alive"], "10m")
         self.assertEqual(body["options"]["temperature"], 0)
         self.assertIn("遊具等", body["format"]["required"])
 

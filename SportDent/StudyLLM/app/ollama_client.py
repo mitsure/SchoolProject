@@ -52,6 +52,8 @@ class OllamaClient:
         request_body = {
             "model": self.model,
             "stream": False,
+            "think": False,
+            "keep_alive": "10m",
             "format": self.output_schema,
             "options": {"temperature": 0},
             "messages": [

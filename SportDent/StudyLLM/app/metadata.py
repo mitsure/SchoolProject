@@ -51,7 +51,7 @@ def validate_metadata(metadata: dict[str, str | None], choices: dict[str, list[s
 def infer_demographics(text: str) -> dict[str, str | None]:
     numerals = {"一": "1", "二": "2", "三": "3", "四": "4", "五": "5", "六": "6"}
     school = grade = evidence = None
-    for phrase, code in (("小学", "小"), ("中学", "中"), ("高校", "高"), ("高等学校", "高")):
+    for phrase, code in (("小学校", "小"), ("小学", "小"), ("中学校", "中"), ("中学", "中"), ("高等学校", "高"), ("高校", "高")):
         match = re.search(re.escape(phrase) + r"([1-6一二三四五六])年生", text)
         if match:
             candidate = numerals.get(match.group(1), match.group(1))
@@ -65,6 +65,11 @@ def infer_demographics(text: str) -> dict[str, str | None]:
         sex = "男"
     elif female and not male:
         sex = "女"
+    else:
+        # 文頭の主語として明示された場合に限り候補化する。
+        subject = re.match(r"^[^。、]{0,30}(男子生徒|女子生徒|男児|女児)(?:が|は)", text)
+        if subject:
+            sex = "男" if subject.group(1) in ("男子生徒", "男児") else "女"
     return {"被災学校種": school, "被災学年": grade, "性別": sex, "evidence": evidence}
 
 

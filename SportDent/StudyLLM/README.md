@@ -78,6 +78,7 @@ SPORTDENT_EXTRACTOR=ollama SPORTDENT_OLLAMA_MODEL=qwen3:8b python run.py
 ```
 
 モデル名は設定で変更できます。M1・16GBでは、まず4-bit量子化された7B〜8B級を候補とし、実測した応答時間と精度で採否を決めます。
+構造化抽出ではQwen3の思考モードを無効にし、モデルを10分間メモリに保持して連続試験時の待ち時間を抑えます。
 
 ## 開発原則
 
