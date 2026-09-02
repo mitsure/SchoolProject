@@ -51,6 +51,17 @@ class ExtractorTest(unittest.TestCase):
         self.assertEqual(result["fields"]["遊具等"]["value"], "ぶらんこ")
         self.assertEqual(result["fields"]["遊具等"]["evidence_text"], "ブランコ")
 
+    def test_unmentioned_sport_and_equipment_remain_null(self):
+        result = self.extract("登校中に転倒した。")
+        self.assertIsNone(result["fields"]["競技種目"]["value"])
+        self.assertIsNone(result["fields"]["遊具等"]["value"])
+
+    def test_other_location_detail_is_required_and_normalized(self):
+        self.assertEqual(self.validator.validate_other_location("その他", "  校門横の通路  "), "校門横の通路")
+        with self.assertRaises(ValueError):
+            self.validator.validate_other_location("その他", "  ")
+        self.assertIsNone(self.validator.validate_other_location("道路", "保存しない文字列"))
+
 
 if __name__ == "__main__":
     unittest.main()
