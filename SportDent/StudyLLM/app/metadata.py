@@ -50,11 +50,18 @@ def validate_metadata(metadata: dict[str, str | None], choices: dict[str, list[s
 
 def infer_demographics(text: str) -> dict[str, str | None]:
     numerals = {"一": "1", "二": "2", "三": "3", "四": "4", "五": "5", "六": "6"}
+    full_width = str.maketrans("０１２３４５６", "0123456")
     school = grade = evidence = None
-    for phrase, code in (("小学校", "小"), ("小学", "小"), ("中学校", "中"), ("中学", "中"), ("高等学校", "高"), ("高校", "高")):
-        match = re.search(re.escape(phrase) + r"([1-6一二三四五六])年生", text)
+    stage_patterns = (
+        (r"(?:小学校|小学|(?<![一-龥ぁ-んァ-ン])小)\s*([1-6１-６一二三四五六])\s*(?:年生|年)?", "小"),
+        (r"(?:中学校|中学|(?<![一-龥ぁ-んァ-ン])中)\s*([1-3１-３一二三])\s*(?:年生|年)?", "中"),
+        (r"(?:高等学校|高校|(?<![一-龥ぁ-んァ-ン])高)\s*([1-3１-３一二三])\s*(?:年生|年)?", "高"),
+    )
+    for pattern, code in stage_patterns:
+        match = re.search(pattern, text)
         if match:
-            candidate = numerals.get(match.group(1), match.group(1))
+            raw_grade = match.group(1).translate(full_width)
+            candidate = numerals.get(raw_grade, raw_grade)
             if candidate in GRADE_RULES[code]:
                 school, grade, evidence = code, candidate, match.group(0)
             break

@@ -30,6 +30,15 @@ class DemographicsTest(unittest.TestCase):
         self.assertEqual(result["被災学年"], "2")
         self.assertEqual(result["性別"], "男")
 
+    def test_middle_school_grade_variants_are_equivalent(self):
+        variants = ("中2の生徒が転倒した。", "中２の生徒が転倒した。", "中二の生徒が転倒した。", "中学2年生が転倒した。", "中学校2年生が転倒した。")
+        normalized = [(infer_demographics(text)["被災学校種"], infer_demographics(text)["被災学年"]) for text in variants]
+        self.assertEqual(normalized, [("中", "2")] * len(variants))
+
+    def test_unrelated_word_ending_in_middle_is_not_grade(self):
+        result = infer_demographics("授業中2人の生徒が衝突した。")
+        self.assertIsNone(result["被災学校種"])
+
 
 if __name__ == "__main__":
     unittest.main()
