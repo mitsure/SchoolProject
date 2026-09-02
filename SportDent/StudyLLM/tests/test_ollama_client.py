@@ -33,6 +33,7 @@ class OllamaClientTest(unittest.TestCase):
         self.assertEqual(body["keep_alive"], "10m")
         self.assertEqual(body["options"]["temperature"], 0)
         self.assertIn("遊具等", body["format"]["required"])
+        self.assertEqual(set(body["format"]["properties"]["遊具等"]["properties"]), {"value", "evidence_text"})
 
 
 if __name__ == "__main__":

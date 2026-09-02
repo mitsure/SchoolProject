@@ -5,10 +5,8 @@ import json
 import socket
 import urllib.error
 import urllib.request
-from pathlib import Path
 from urllib.parse import urlparse
 
-from .extractor import BASE_DIR
 from .models import FIELD_NAMES
 
 
@@ -38,14 +36,20 @@ class OllamaClient:
 
     @staticmethod
     def _load_output_schema() -> dict:
-        schema = json.loads((BASE_DIR / "09_構造化出力JSONSchema.json").read_text(encoding="utf-8"))
-        fields = schema["properties"]["fields"]
+        candidate = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["value", "evidence_text"],
+            "properties": {
+                "value": {"type": ["string", "null"]},
+                "evidence_text": {"type": ["string", "null"]},
+            },
+        }
         return {
             "type": "object",
             "additionalProperties": False,
             "required": list(FIELD_NAMES),
-            "properties": fields["properties"],
-            "$defs": schema["$defs"],
+            "properties": {name: candidate for name in FIELD_NAMES},
         }
 
     def complete_json(self, system_prompt: str, user_payload: dict) -> dict:
