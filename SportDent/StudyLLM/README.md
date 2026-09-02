@@ -40,6 +40,45 @@ LLMがDB既存項目の候補と根拠を抽出
 
 設計・監査段階です。まだ本番用アプリ、確定した公式カテゴリ辞書、未使用の最終評価データ、外部APIへの実データ送信許可はありません。現時点の資料だけで実事故文を外部サービスへ送信しないでください。
 
+## ローカルMVP
+
+外部APIへ接続しない規則ベース抽出器を使い、入力・確認・SQLite保存までの流れを試せます。これは画面と検証規則を開発するための足場であり、本番LLMや精度評価済みモデルではありません。
+
+入力画面では事故状況だけを扱い、和暦・給付年度・記号・種別は表示しません。結果画面では被災学校種に応じて有効な学年だけを選べます。学校種が未選択なら学年は無効になり、高等学校4年は登録疑義として候補から除外しています。
+
+```bash
+cd SportDent/StudyLLM
+python -m pip install -r requirements.txt
+python run.py
+```
+
+ブラウザで `http://127.0.0.1:8000` を開きます。開発時も架空例または適切に匿名化された文章だけを使用してください。中核ロジックの試験は依存追加なしで実行できます。
+
+```bash
+cd SportDent/StudyLLM
+PYTHONPATH=. python -m unittest discover -s tests -v
+python 13_設計整合性チェック.py
+```
+
+既存DBを暫定ラベルとして使う開発診断は次で実行します。原文や記号はレポートへ出力しません。この数値を最終性能として扱わないでください。
+
+```bash
+cd SportDent/StudyLLM
+PYTHONPATH=. python -m evaluation.evaluate_silver --output /tmp/sportdent-silver-report.json
+```
+
+`app/llm_extractor.py`にはプロバイダー交換可能なLLM接続口がありますが、外部送信許可と利用事業者が未確定のため、画面からは有効化していません。LLM応答は許容値・根拠位置・全項目構造を検証し、1項目でも不正なら部分結果を保存せず処理エラーにします。
+
+### MacでOllamaを使う場合
+
+OllamaとモデルをMacへ準備した後、次の環境変数でローカルLLMへ切り替えます。接続先はコード側でループバックアドレスだけに制限しており、既定状態では規則ベースのままです。
+
+```bash
+SPORTDENT_EXTRACTOR=ollama SPORTDENT_OLLAMA_MODEL=qwen3:8b python run.py
+```
+
+モデル名は設定で変更できます。M1・16GBでは、まず4-bit量子化された7B〜8B級を候補とし、実測した応答時間と精度で採否を決めます。
+
 ## 開発原則
 
 - LLMが作った独自カテゴリをDBへ保存しない。

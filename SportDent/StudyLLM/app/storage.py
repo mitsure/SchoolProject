@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from pathlib import Path
+
+
+class ReviewStore:
+    def __init__(self, path: Path):
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS reviews (
+                id INTEGER PRIMARY KEY, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                input_text TEXT NOT NULL, input_hash TEXT NOT NULL,
+                extracted_json TEXT NOT NULL, confirmed_json TEXT NOT NULL
+            )""")
+
+    def _connect(self):
+        return sqlite3.connect(self.path)
+
+    def save(self, text: str, result: dict, confirmed: dict) -> int:
+        with self._connect() as db:
+            cur = db.execute(
+                "INSERT INTO reviews(input_text,input_hash,extracted_json,confirmed_json) VALUES(?,?,?,?)",
+                (text, result["input_hash"], json.dumps(result, ensure_ascii=False), json.dumps(confirmed, ensure_ascii=False)),
+            )
+            return int(cur.lastrowid)
