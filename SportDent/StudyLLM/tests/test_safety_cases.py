@@ -27,7 +27,7 @@ class SafetyCasesTest(unittest.TestCase):
         return result["fields"][field]["value"]
 
     def test_all_csv_cases_are_covered(self):
-        self.assertEqual(set(self.cases), {f"T{i:03d}" for i in range(1, 15)})
+        self.assertEqual(set(self.cases), {f"T{i:03d}" for i in range(1, 16)})
 
     def test_t001_commute_does_not_imply_road(self):
         r = self.result("T001"); self.assertEqual(self.value(r, "通学方法"), "自転車"); self.assertIsNone(self.value(r, "発生場所2"))
@@ -70,6 +70,13 @@ class SafetyCasesTest(unittest.TestCase):
 
     def test_t014_empty_input_stops(self):
         self.assertEqual(self.result("T014")["error_code"], "EMPTY_INPUT")
+
+    def test_t015_other_persons_place_and_equipment_are_null(self):
+        r = self.result("T015")
+        self.assertEqual(self.value(r, "場合別2"), "登校（登園）中")
+        self.assertEqual(self.value(r, "通学方法"), "自転車")
+        self.assertIsNone(self.value(r, "発生場所2"))
+        self.assertIsNone(self.value(r, "遊具等"))
 
 
 if __name__ == "__main__":

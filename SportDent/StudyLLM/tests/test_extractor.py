@@ -62,6 +62,15 @@ class ExtractorTest(unittest.TestCase):
             self.validator.validate_other_location("その他", "  ")
         self.assertIsNone(self.validator.validate_other_location("道路", "保存しない文字列"))
 
+    def test_other_persons_place_and_equipment_are_not_the_victims(self):
+        text = "中2の男子生徒が、自転車で登校中、公園の滑り台で遊んでいる弟を見ていたら電柱と激突した。"
+        result = self.extract(text)
+        self.assertEqual(result["fields"]["場合別1"]["value"], "通学中")
+        self.assertEqual(result["fields"]["場合別2"]["value"], "登校（登園）中")
+        self.assertEqual(result["fields"]["通学方法"]["value"], "自転車")
+        self.assertIsNone(result["fields"]["発生場所2"]["value"])
+        self.assertIsNone(result["fields"]["遊具等"]["value"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,7 @@ import csv
 import hashlib
 import hmac
 import os
+import re
 from pathlib import Path
 from typing import Protocol
 
@@ -11,6 +12,27 @@ from .models import FIELD_NAMES, FieldResult, empty_field
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+THIRD_PARTY_FIELDS = frozenset(("競技種目", "発生場所1", "発生場所2", "遊具等"))
+SPORT_CONTEXT_MARKERS = ("試合中", "練習中", "授業中", "プレー中", "競技中", "大会中", "部活動中")
+THIRD_PARTY_ACTIVITY = re.compile(
+    r"[^。、]{0,50}?(?:で遊(?:んで)?|を(?:使用|利用)し|を使(?:っ)?て|に乗(?:っ)?て|で(?:練習|プレー)し|をして)"
+    r"(?:い|いた|お)?(?:る|た)?[^。、]{0,8}"
+    r"(?:弟|妹|兄|姉|友人|友達|同級生|他の(?:児童|生徒|園児|子ども)|児童|生徒|園児|子ども)"
+    r"(?:を|が|は)[^。、]{0,12}(?:見|眺め|観察)"
+)
+
+
+def evidence_is_third_party_activity(text: str, start: int | None, end: int | None) -> bool:
+    """根拠が、被災者ではなく観察対象の人物の活動を説明しているか確認する。"""
+    if start is None or end is None:
+        return False
+    return any(start < match.end() and end > match.start() for match in THIRD_PARTY_ACTIVITY.finditer(text))
+
+
+def sport_activity_is_established(text: str) -> bool:
+    """競技名の単なる登場ではなく、実施中の文脈があるか確認する。"""
+    return any(marker in text for marker in SPORT_CONTEXT_MARKERS)
 
 
 class Extractor(Protocol):
@@ -100,6 +122,16 @@ class RuleBasedExtractor:
         if "鉄棒" in text and any(phrase in text for phrase in ("鉄棒で遊", "鉄棒を使用", "鉄棒から落")):
             fields["遊具等"] = self._explicit(text, "鉄棒", "鉄棒", "DIRECT_PLAY_USE")
 
+        # 「滑り台で遊ぶ弟を見ていた」等は、観察対象の場所・活動・遊具である。
+        if "校外" in text:
+            fields["発生場所1"] = self._explicit(text, "校外", "学校外（園外）", "DIRECT_PLACE_CONTEXT")
+            if "体育館" in text:
+                fields["発生場所2"] = self._explicit(text, "体育館", "学校外体育館", "DIRECT_PLACE_CONTEXT")
+        for field in THIRD_PARTY_FIELDS:
+            candidate = fields[field]
+            if candidate.value and evidence_is_third_party_activity(text, candidate.evidence_start, candidate.evidence_end):
+                fields[field] = empty_field("validation_rejected", "THIRD_PARTY_ACTIVITY")
+
         # 種類が示されない部活動は、運動部・文化部を推測せず曖昧として残す。
         if "部活動の練習中" in text and fields["場合別2"].value is None:
             fields["場合別2"] = empty_field("ambiguous", "ACTIVITY_TYPE_AMBIGUOUS")
@@ -109,15 +141,9 @@ class RuleBasedExtractor:
         for prefix, lower_name, upper_name in (("場合別", "場合別2", "場合別1"), ("発生場所", "発生場所2", "発生場所1")):
             lower = fields[lower_name]
             mapping = self.hierarchy.get((prefix, lower.value or ""))
-            if lower.status == "explicit" and mapping:
+            if lower.status == "explicit" and mapping and fields[upper_name].value is None:
                 upper_value, rule_id = mapping
                 fields[upper_name] = FieldResult(upper_value, "derived", None, lower.evidence_text, lower.evidence_start, lower.evidence_end, "derived_hierarchy", lower_name, rule_id, "passed")
-
-        # 「校外」は発生場所1の直接根拠として階層派生より優先。
-        if "校外" in text:
-            fields["発生場所1"] = self._explicit(text, "校外", "学校外（園外）", "DIRECT_PLACE_CONTEXT")
-            if "体育館" in text:
-                fields["発生場所2"] = self._explicit(text, "体育館", "学校外体育館", "DIRECT_PLACE_CONTEXT")
 
         # 通学方法は通学中が確定した場合だけ保持する。否定表現も除外する。
         if fields["場合別1"].value != "通学中":
@@ -127,7 +153,7 @@ class RuleBasedExtractor:
 
         # 競技は本人が実施中と読める限定的な文脈だけ採用する。
         sport = fields["競技種目"]
-        if sport.value and not any(x in text for x in ("試合中", "練習中", "授業中", "プレー中")):
+        if sport.value and not sport_activity_is_established(text):
             fields["競技種目"] = empty_field("validation_rejected", "ACTIVITY_NOT_ESTABLISHED")
 
         return {"schema_version": "1.0.1", "processing_status": "success", "input_hash": self._input_hash(text), "error_code": None, "fields": {k: v.as_dict() for k, v in fields.items()}}

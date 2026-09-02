@@ -12,6 +12,11 @@ from .validator import ResultValidator, ValidationError
 
 app = FastAPI(title="SportDent StudyLLM MVP")
 validator = ResultValidator()
+STATUS_LABELS = {
+    "explicit": "原文明記", "derived": "規則で補完", "not_mentioned": "記載なし（NULL）",
+    "ambiguous": "要確認（曖昧）", "conflict": "要確認（矛盾）", "unsupported": "候補外（NULL）",
+    "validation_rejected": "検証で除外（NULL）", "not_applicable": "非該当（NULL）",
+}
 
 def build_extractor():
     mode = os.environ.get("SPORTDENT_EXTRACTOR", "rules").lower()
@@ -56,7 +61,7 @@ async def analyze(request: Request):
         control = select(name, sorted(validator.allowed[name]), field["value"], element_id="place2" if name == "発生場所2" else None)
         if name == "発生場所2":
             control += "<label id='place-other-wrap' class='other-location' hidden>その他の発生場所 <input id='place-other' type='text' name='発生場所2（その他詳細）' maxlength='100' placeholder='例：校門横の自転車置き場' disabled></label>"
-        rows.append(f"<tr><th>{html.escape(name)}</th><td>{control}</td><td>{html.escape(field['status'])}</td><td>{html.escape(field['evidence_text'] or '')}</td></tr>")
+        rows.append(f"<tr><th>{html.escape(name)}</th><td>{control}</td><td>{html.escape(STATUS_LABELS.get(field['status'], field['status']))}</td><td>{html.escape(field['evidence_text'] or '')}</td></tr>")
     rows.append(f"<tr><th>災害発生時の状況</th><td colspan='3'>{html.escape(text)}</td></tr>")
     payload, rules = html.escape(json.dumps(result, ensure_ascii=False)), html.escape(json.dumps(GRADE_RULES, ensure_ascii=False))
     script = f"<script>const rules=JSON.parse('{rules}'),school=document.getElementById('school'),grade=document.getElementById('grade'),place2=document.getElementById('place2'),placeOther=document.getElementById('place-other'),placeOtherWrap=document.getElementById('place-other-wrap');function syncGrade(){{const a=rules[school.value]||[];for(const o of grade.options)o.hidden=o.value!==''&&!a.includes(o.value);if(!a.includes(grade.value))grade.value='';grade.disabled=!school.value}}function syncOtherPlace(){{const active=place2.value==='その他';placeOtherWrap.hidden=!active;placeOther.disabled=!active;placeOther.required=active;if(!active)placeOther.value=''}}school.addEventListener('change',syncGrade);place2.addEventListener('change',syncOtherPlace);syncGrade();syncOtherPlace()</script>"

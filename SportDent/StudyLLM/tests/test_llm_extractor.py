@@ -51,13 +51,14 @@ class LLMExtractorTest(unittest.TestCase):
         self.assertEqual(result["error_code"], "LLM_TIMEOUT")
         self.assertEqual(result["fields"], {})
 
-    def test_evidence_must_match_original_text(self):
+    def test_dictionary_recovers_bad_llm_evidence(self):
         text = "登校中に転倒した。"
         fields = self.valid_fields(text)
         fields["場合別2"]["evidence_text"] = "下校中"
         result = LLMExtractor(FakeClient(fields)).extract(text)
         self.assertEqual(result["processing_status"], "success")
-        self.assertEqual(result["fields"]["場合別2"]["status"], "validation_rejected")
+        self.assertEqual(result["fields"]["場合別2"]["value"], "登校（登園）中")
+        self.assertEqual(result["fields"]["場合別2"]["provenance"], "synonym_rule")
 
     def test_missing_field_rejects_only_that_field(self):
         text = "自転車で登校中、転倒した。"
@@ -66,6 +67,24 @@ class LLMExtractorTest(unittest.TestCase):
         result = LLMExtractor(FakeClient(fields)).extract(text)
         self.assertEqual(result["fields"]["遊具等"]["reason_code"], "MALFORMED_FIELD")
         self.assertEqual(result["fields"]["通学方法"]["value"], "自転車")
+
+    def test_other_persons_context_is_rejected_and_dictionary_is_kept(self):
+        text = "中2の男子生徒が、自転車で登校中、公園の滑り台で遊んでいる弟を見ていたら電柱と激突した。"
+        evidence = "公園の滑り台で遊んでいる弟を見ていたら"
+        fields = {name: {"value": None, "evidence_text": None} for name in FIELD_NAMES}
+        fields["競技種目"] = {"value": "自転車競技", "evidence_text": "自転車で登校中"}
+        fields["発生場所1"] = {"value": "学校外（園外）", "evidence_text": evidence}
+        fields["発生場所2"] = {"value": "公園・遊園地", "evidence_text": evidence}
+        fields["遊具等"] = {"value": "すべり台", "evidence_text": evidence}
+        result = LLMExtractor(FakeClient(fields)).extract(text)
+        self.assertEqual(result["fields"]["場合別2"]["value"], "登校（登園）中")
+        self.assertEqual(result["fields"]["通学方法"]["value"], "自転車")
+        self.assertIsNone(result["fields"]["競技種目"]["value"])
+        self.assertEqual(result["fields"]["競技種目"]["reason_code"], "ACTIVITY_NOT_ESTABLISHED")
+        self.assertIsNone(result["fields"]["発生場所1"]["value"])
+        self.assertIsNone(result["fields"]["発生場所2"]["value"])
+        self.assertEqual(result["fields"]["発生場所2"]["reason_code"], "THIRD_PARTY_ACTIVITY")
+        self.assertIsNone(result["fields"]["遊具等"]["value"])
 
 
 if __name__ == "__main__":
