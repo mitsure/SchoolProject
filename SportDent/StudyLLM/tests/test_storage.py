@@ -18,6 +18,19 @@ class ReviewStoreTest(unittest.TestCase):
             self.assertEqual([row["id"] for row in reviews], [second_id, first_id])
             self.assertEqual(reviews[0]["confirmed"]["被災学校種"], "中")
 
+    def test_confirmation_can_be_updated_and_deleted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = ReviewStore(Path(directory) / "reviews.sqlite3")
+            review_id = store.save("原文", {"input_hash": "hash"}, {"性別": "男"})
+
+            self.assertTrue(store.update_confirmed(review_id, {"性別": "女"}))
+            self.assertEqual(store.get_confirmed(review_id)["confirmed"]["性別"], "女")
+            self.assertFalse(store.update_confirmed(review_id + 1, {"性別": "男"}))
+
+            self.assertTrue(store.delete(review_id))
+            self.assertIsNone(store.get_confirmed(review_id))
+            self.assertFalse(store.delete(review_id))
+
 
 if __name__ == "__main__":
     unittest.main()

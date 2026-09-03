@@ -58,6 +58,21 @@ REVIEW_FIELDS = (
     "遊具等",
     "災害発生時の状況",
 )
+FORM_FIELD_NAMES = {
+    "種別": "injury_type",
+    "被災学校種": "school_type",
+    "被災学年": "grade",
+    "性別": "sex",
+    "場合別1": "case_level_1",
+    "場合別2": "case_level_2",
+    "競技種目": "sport",
+    "通学方法": "commute_method",
+    "発生場所1": "place_level_1",
+    "発生場所2": "place_level_2",
+    "発生場所2（その他詳細）": "place_other_detail",
+    "遊具等": "equipment",
+    "災害発生時の状況": "situation",
+}
 
 
 def build_extractor():
@@ -107,7 +122,7 @@ def page(body: str, *, authenticated: bool = False) -> str:
     textarea{{width:100%;box-sizing:border-box}} table{{border-collapse:collapse;width:100%}} td,th{{border:1px solid #ccc;padding:.55rem;text-align:left;vertical-align:top}}
     input,select,button{{font:inherit}} select,input[type='text'],input[type='password']{{padding:.45rem;max-width:100%;box-sizing:border-box}}
     button,.button{{display:inline-block;padding:.65rem 1rem;border:1px solid #315efb;border-radius:.4rem;background:#315efb;color:white;text-decoration:none;cursor:pointer}}
-    .secondary{{background:white;color:#315efb}} .error{{color:#a00}} .notice{{background:#fff8d8;padding:.8rem;border-radius:.4rem}}
+    .secondary{{background:white;color:#315efb}} .danger{{background:#b42318;border-color:#b42318}} .error{{color:#a00}} .notice{{background:#fff8d8;padding:.8rem;border-radius:.4rem}}
     .login{{max-width:28rem;margin:3rem auto}} .login label{{display:block;margin:1rem 0}} .login input{{display:block;width:100%;margin-top:.35rem}}
     .actions{{display:flex;gap:1rem;flex-wrap:wrap;margin:1.5rem 0}} nav{{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:.7rem 0;border-bottom:1px solid #ddd}}
     nav .inline{{margin-left:auto}} nav button{{padding:.35rem .65rem;background:white;color:#315efb}} .other-location{{display:block;margin-top:.5rem}}
@@ -155,6 +170,96 @@ def display_review_value(name: str, value) -> str:
         value = f"{value}年"
     css_class = " class='situation'" if name == "災害発生時の状況" else ""
     return f"<span{css_class}>{html.escape(str(value))}</span>"
+
+
+def form_value(form, field_name: str) -> str:
+    """フォーム内部名は文字コード差を避けるためASCIIに固定する。"""
+    value = form.get(FORM_FIELD_NAMES[field_name])
+    if value is None:
+        value = form.get(field_name, "")
+    return str(value)
+
+
+def school_select(selected: str | None) -> str:
+    options = ["<option value=''>ー</option>"] + [
+        f"<option value='{code}'{' selected' if selected == code else ''}>{html.escape(label)}</option>"
+        for code, label in SCHOOL_LABELS.items()
+    ]
+    return f"<select id='school' name='{FORM_FIELD_NAMES['被災学校種']}'>{''.join(options)}</select>"
+
+
+def grade_select(selected: str | None) -> str:
+    options = ["<option value=''>ー</option>"] + [
+        f"<option value='{number}'{' selected' if selected == str(number) else ''}>{number}年</option>"
+        for number in range(7)
+    ]
+    return f"<select id='grade' name='{FORM_FIELD_NAMES['被災学年']}'>{''.join(options)}</select>"
+
+
+def dependent_select_script() -> str:
+    rules = json.dumps(GRADE_RULES, ensure_ascii=False).replace("<", "\\u003c").replace("&", "\\u0026")
+    return f"""<script>
+    const rules={rules},school=document.getElementById('school'),grade=document.getElementById('grade'),place2=document.getElementById('place2'),placeOther=document.getElementById('place-other'),placeOtherWrap=document.getElementById('place-other-wrap');
+    function syncGrade(){{const allowed=rules[school.value]||[];for(const option of grade.options)option.hidden=option.value!==''&&!allowed.includes(option.value);if(!allowed.includes(grade.value))grade.value='';grade.disabled=!school.value}}
+    function syncOtherPlace(){{const active=place2.value==='その他';placeOtherWrap.hidden=!active;placeOther.disabled=!active;placeOther.required=active;if(!active)placeOther.value=''}}
+    school.addEventListener('change',syncGrade);place2.addEventListener('change',syncOtherPlace);syncGrade();syncOtherPlace();
+    </script>"""
+
+
+def editable_review_rows(record: dict) -> str:
+    rows = [
+        f"<tr><th>種別</th><td>{select(FORM_FIELD_NAMES['種別'], INJURY_TYPE_VALUES, record.get('種別'))}</td></tr>",
+        f"<tr><th>被災学校種</th><td>{school_select(record.get('被災学校種'))}</td></tr>",
+        f"<tr><th>被災学年</th><td>{grade_select(record.get('被災学年'))}</td></tr>",
+        f"<tr><th>性別</th><td>{select(FORM_FIELD_NAMES['性別'], ('男', '女'), record.get('性別'))}</td></tr>",
+    ]
+    for name in validator.allowed:
+        control = select(
+            FORM_FIELD_NAMES[name],
+            sorted(validator.allowed[name]),
+            record.get(name),
+            element_id="place2" if name == "発生場所2" else None,
+        )
+        if name == "発生場所2":
+            detail = html.escape(str(record.get("発生場所2（その他詳細）") or ""))
+            control += (
+                "<label id='place-other-wrap' class='other-location' hidden>その他の発生場所 "
+                f"<input id='place-other' type='text' name='{FORM_FIELD_NAMES['発生場所2（その他詳細）']}' maxlength='100' value='{detail}' disabled></label>"
+            )
+        rows.append(f"<tr><th>{html.escape(name)}</th><td>{control}</td></tr>")
+    situation = html.escape(str(record.get("災害発生時の状況") or ""))
+    rows.append(
+        "<tr><th>災害発生時の状況</th>"
+        f"<td><textarea name='{FORM_FIELD_NAMES['災害発生時の状況']}' rows='8' maxlength='5000' required>{situation}</textarea></td></tr>"
+    )
+    return "".join(rows)
+
+
+def confirmed_record_from_form(form) -> dict:
+    injury_type, school, grade, sex = (
+        form_value(form, name).strip() or None
+        for name in ("種別", "被災学校種", "被災学年", "性別")
+    )
+    confirmed = {name: form_value(form, name).strip() or None for name in validator.allowed}
+    validate_injury_type(injury_type)
+    validate_demographics(school, grade, sex)
+    validator.validate_confirmed(confirmed)
+    other_location = validator.validate_other_location(
+        confirmed["発生場所2"],
+        form_value(form, "発生場所2（その他詳細）"),
+    )
+    situation = form_value(form, "災害発生時の状況").strip()
+    if not situation or len(situation) > 5000:
+        raise ValueError("災害発生時の状況が不正です")
+    return {
+        "種別": injury_type,
+        "被災学校種": school,
+        "被災学年": grade,
+        "性別": sex,
+        **confirmed,
+        "発生場所2（その他詳細）": other_location,
+        "災害発生時の状況": situation,
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -246,9 +351,81 @@ def reviews(request: Request):
         )
         sections.append(
             f"<section class='record'><h2>ID: {review['id']}</h2>"
-            f"<p>保存日時（UTC）: {html.escape(str(review['created_at']))}</p><table>{rows}</table></section>"
+            f"<p>保存日時（UTC）: {html.escape(str(review['created_at']))}</p><table>{rows}</table>"
+            f"<div class='actions'><a class='button secondary' href='/reviews/{review['id']}/edit'>編集</a>"
+            f"<a class='button danger' href='/reviews/{review['id']}/delete'>削除</a></div></section>"
         )
     return page(f"<h2>保存済みデータ（{len(saved_reviews)}件）</h2>{''.join(sections)}", authenticated=True)
+
+
+@app.get("/reviews/{review_id}/edit", response_class=HTMLResponse)
+def edit_review(request: Request, review_id: int):
+    if not is_authenticated(request):
+        return login_redirect()
+    review = store.get_confirmed(review_id)
+    if review is None:
+        raise HTTPException(404, "保存データが見つかりません")
+    return page(
+        f"<h2>ID: {review_id}を編集</h2><form method='post' action='/reviews/{review_id}/edit'>"
+        f"<table><tr><th>項目</th><th>修正値</th></tr>{editable_review_rows(review['confirmed'])}</table>"
+        "<p><label><input type='checkbox' name='confirmed' value='yes' required> 変更内容を確認しました</label></p>"
+        "<div class='actions'><a class='button secondary' href='/reviews'>キャンセル</a>"
+        "<button type='submit'>変更を保存</button></div></form>"
+        f"{dependent_select_script()}",
+        authenticated=True,
+    )
+
+
+@app.post("/reviews/{review_id}/edit", response_class=HTMLResponse)
+async def update_review(request: Request, review_id: int):
+    if not is_authenticated(request):
+        return login_redirect()
+    form = await request.form()
+    if form.get("confirmed") != "yes":
+        raise HTTPException(400, "変更内容の確認が必要です")
+    try:
+        record = confirmed_record_from_form(form)
+    except (ValidationError, ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(400, "更新内容が不正です") from exc
+    if not store.update_confirmed(review_id, record):
+        raise HTTPException(404, "保存データが見つかりません")
+    return page(
+        f"<p>ID: {review_id}の変更を保存しました。</p><p><a class='button' href='/reviews'>DB一覧へ戻る</a></p>",
+        authenticated=True,
+    )
+
+
+@app.get("/reviews/{review_id}/delete", response_class=HTMLResponse)
+def confirm_delete_review(request: Request, review_id: int):
+    if not is_authenticated(request):
+        return login_redirect()
+    review = store.get_confirmed(review_id)
+    if review is None:
+        raise HTTPException(404, "保存データが見つかりません")
+    situation = display_review_value("災害発生時の状況", review["confirmed"].get("災害発生時の状況"))
+    return page(
+        f"<h2>ID: {review_id}を削除</h2><p class='notice'>この操作は取り消せません。</p>"
+        f"<p>{situation}</p><form method='post' action='/reviews/{review_id}/delete'>"
+        "<p><label><input type='checkbox' name='confirm' value='yes' required> このデータを削除します</label></p>"
+        "<div class='actions'><a class='button secondary' href='/reviews'>キャンセル</a>"
+        "<button class='danger' type='submit'>完全に削除</button></div></form>",
+        authenticated=True,
+    )
+
+
+@app.post("/reviews/{review_id}/delete", response_class=HTMLResponse)
+async def delete_review(request: Request, review_id: int):
+    if not is_authenticated(request):
+        return login_redirect()
+    form = await request.form()
+    if form.get("confirm") != "yes":
+        raise HTTPException(400, "削除確認が必要です")
+    if not store.delete(review_id):
+        raise HTTPException(404, "保存データが見つかりません")
+    return page(
+        f"<p>ID: {review_id}を削除しました。</p><p><a class='button' href='/reviews'>DB一覧へ戻る</a></p>",
+        authenticated=True,
+    )
 
 
 @app.post("/analyze", response_class=HTMLResponse)
@@ -287,21 +464,21 @@ async def analyze(request: Request):
     injury_value = injury["種別"]
     injury_evidence = html.escape(injury["evidence"] or "")
     rows = [
-        f"<tr><th>種別</th><td>{select('種別', INJURY_TYPE_VALUES, injury_value)}</td>"
+        f"<tr><th>種別</th><td>{select(FORM_FIELD_NAMES['種別'], INJURY_TYPE_VALUES, injury_value)}</td>"
         f"<td>{'規則で補完' if injury_value else '人が選択'}</td><td>{injury_evidence}</td></tr>",
-        f"<tr><th>被災学校種</th><td><select id='school' name='被災学校種'>{''.join(schools)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
-        f"<tr><th>被災学年</th><td><select id='grade' name='被災学年'>{''.join(grades)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
-        f"<tr><th>性別</th><td><select name='性別'>{''.join(sexes)}</select></td><td>{'原文明記' if demo['性別'] else '人が選択'}</td><td></td></tr>",
+        f"<tr><th>被災学校種</th><td><select id='school' name='{FORM_FIELD_NAMES['被災学校種']}'>{''.join(schools)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
+        f"<tr><th>被災学年</th><td><select id='grade' name='{FORM_FIELD_NAMES['被災学年']}'>{''.join(grades)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
+        f"<tr><th>性別</th><td><select name='{FORM_FIELD_NAMES['性別']}'>{''.join(sexes)}</select></td><td>{'原文明記' if demo['性別'] else '人が選択'}</td><td></td></tr>",
     ]
     for name, field in result["fields"].items():
         control = select(
-            name,
+            FORM_FIELD_NAMES[name],
             sorted(validator.allowed[name]),
             field["value"],
             element_id="place2" if name == "発生場所2" else None,
         )
         if name == "発生場所2":
-            control += "<label id='place-other-wrap' class='other-location' hidden>その他の発生場所 <input id='place-other' type='text' name='発生場所2（その他詳細）' maxlength='100' placeholder='例：校門横の自転車置き場' disabled></label>"
+            control += f"<label id='place-other-wrap' class='other-location' hidden>その他の発生場所 <input id='place-other' type='text' name='{FORM_FIELD_NAMES['発生場所2（その他詳細）']}' maxlength='100' placeholder='例：校門横の自転車置き場' disabled></label>"
         rows.append(
             f"<tr><th>{html.escape(name)}</th><td>{control}</td>"
             f"<td>{html.escape(STATUS_LABELS.get(field['status'], field['status']))}</td>"
@@ -309,13 +486,7 @@ async def analyze(request: Request):
         )
     rows.append(f"<tr><th>災害発生時の状況</th><td colspan='3'>{html.escape(text)}</td></tr>")
     payload = html.escape(json.dumps(result, ensure_ascii=False))
-    rules = html.escape(json.dumps(GRADE_RULES, ensure_ascii=False))
-    script = f"""<script>
-    const rules=JSON.parse('{rules}'),school=document.getElementById('school'),grade=document.getElementById('grade'),place2=document.getElementById('place2'),placeOther=document.getElementById('place-other'),placeOtherWrap=document.getElementById('place-other-wrap');
-    function syncGrade(){{const allowed=rules[school.value]||[];for(const option of grade.options)option.hidden=option.value!==''&&!allowed.includes(option.value);if(!allowed.includes(grade.value))grade.value='';grade.disabled=!school.value}}
-    function syncOtherPlace(){{const active=place2.value==='その他';placeOtherWrap.hidden=!active;placeOther.disabled=!active;placeOther.required=active;if(!active)placeOther.value=''}}
-    school.addEventListener('change',syncGrade);place2.addEventListener('change',syncOtherPlace);syncGrade();syncOtherPlace();
-    </script>"""
+    script = dependent_select_script()
     return page(
         f"<form method='post' action='/save'><input type='hidden' name='text' value='{html.escape(text)}'>"
         f"<input type='hidden' name='result_json' value='{payload}'><table><tr><th>項目</th><th>候補（修正可）</th><th>状態</th><th>根拠</th></tr>{''.join(rows)}</table>"
@@ -338,16 +509,16 @@ async def save(request: Request):
         result = json.loads(str(form.get("result_json", "")))
         validator.validate(text.strip(), result)
         injury_type, school, grade, sex = (
-            str(form.get(name, "")).strip() or None
+            form_value(form, name).strip() or None
             for name in ("種別", "被災学校種", "被災学年", "性別")
         )
-        confirmed = {name: str(form.get(name, "")).strip() or None for name in result["fields"]}
+        confirmed = {name: form_value(form, name).strip() or None for name in result["fields"]}
         validate_injury_type(injury_type)
         validate_demographics(school, grade, sex)
         validator.validate_confirmed(confirmed)
         other_location = validator.validate_other_location(
             confirmed["発生場所2"],
-            str(form.get("発生場所2（その他詳細）", "")),
+            form_value(form, "発生場所2（その他詳細）"),
         )
     except (json.JSONDecodeError, ValidationError, ValueError, KeyError, TypeError) as exc:
         raise HTTPException(400, "保存内容が不正です") from exc
