@@ -112,14 +112,21 @@ chmod +x scripts/install_macos_autostart.sh
 
 ### 固定URLでインターネット公開する場合
 
-独自ドメインを使わず固定HTTPS URLにする場合は、TailscaleをMacへインストールしてログインした後、次を一度実行します。初回はブラウザに表示されるFunnel有効化を承認します。
+独自ドメインを使わず固定HTTPS URLにする場合はngrokを使用します。無料プランには自動割当の固定開発ドメインが1つ含まれます。ngrokアカウントを作成して管理画面から取得したトークンを登録します。トークンはパスワードと同様に扱い、リポジトリやチャットへ貼らないでください。
 
 ```bash
-tailscale funnel --bg 8000
-tailscale funnel status
+brew install ngrok
+ngrok config add-authtoken 'ここに自分のトークン'
+ngrok http 8000
 ```
 
-表示される`https://...ts.net`が外部端末用の固定URLです。`--bg`で設定したFunnelはTailscale再起動後にも公開を再開します。Macが起動中でも、スリープ中、ログアウト中、インターネット未接続、StudyLLMまたはOllama停止中は正常に利用できません。終了するときは`tailscale funnel 8000 off`を実行します。
+表示された`https://...ngrok-free.app`をiPad等から開いて確認します。確認後に`Control + C`で手動ngrokを停止し、次を実行すると、Macへのログイン時にngrokも自動起動します。
+
+```bash
+./scripts/install_ngrok_autostart.sh
+```
+
+Macが起動中でも、スリープ中、ログアウト中、インターネット未接続、StudyLLMまたはOllama停止中は正常に利用できません。公開を止める手順はスクリプト実行後に表示されます。
 
 ### Cloudflareで一時的にインターネット公開する場合
 
