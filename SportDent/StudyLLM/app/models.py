@@ -6,7 +6,7 @@ from typing import Literal
 
 METADATA_NAMES = ("和暦", "給付年度", "記号", "種別", "被災学校種", "被災学年", "性別")
 FIELD_NAMES = ("場合別1", "場合別2", "競技種目", "通学方法", "発生場所1", "発生場所2", "遊具等")
-DB_COLUMNS = METADATA_NAMES + FIELD_NAMES + ("災害発生時の状況",)
+DB_COLUMNS = METADATA_NAMES + FIELD_NAMES + ("災害発生時の状況", "コメント")
 
 
 @dataclass(frozen=True)

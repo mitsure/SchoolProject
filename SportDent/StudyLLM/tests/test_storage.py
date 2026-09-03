@@ -31,6 +31,15 @@ class ReviewStoreTest(unittest.TestCase):
             self.assertIsNone(store.get_confirmed(review_id))
             self.assertFalse(store.delete(review_id))
 
+    def test_optional_comment_is_saved_and_updated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = ReviewStore(Path(directory) / "reviews.sqlite3")
+            review_id = store.save("原文", {"input_hash": "hash"}, {"コメント": None})
+
+            self.assertIsNone(store.get_confirmed(review_id)["confirmed"]["コメント"])
+            self.assertTrue(store.update_confirmed(review_id, {"コメント": "要再確認"}))
+            self.assertEqual(store.get_confirmed(review_id)["confirmed"]["コメント"], "要再確認")
+
 
 if __name__ == "__main__":
     unittest.main()

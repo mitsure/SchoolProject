@@ -21,6 +21,7 @@ from .metadata import (
     validate_injury_type,
 )
 from .ollama_client import OllamaClient
+from .review_comment import COMMENT_MAX_LENGTH, normalize_comment
 from .storage import ReviewStore
 from .validator import ResultValidator, ValidationError
 
@@ -57,6 +58,7 @@ REVIEW_FIELDS = (
     "発生場所2（その他詳細）",
     "遊具等",
     "災害発生時の状況",
+    "コメント",
 )
 FORM_FIELD_NAMES = {
     "種別": "injury_type",
@@ -72,6 +74,7 @@ FORM_FIELD_NAMES = {
     "発生場所2（その他詳細）": "place_other_detail",
     "遊具等": "equipment",
     "災害発生時の状況": "situation",
+    "コメント": "comment",
 }
 
 
@@ -168,7 +171,7 @@ def display_review_value(name: str, value) -> str:
         value = SCHOOL_LABELS.get(str(value), value)
     elif name == "被災学年":
         value = f"{value}年"
-    css_class = " class='situation'" if name == "災害発生時の状況" else ""
+    css_class = " class='situation'" if name in ("災害発生時の状況", "コメント") else ""
     return f"<span{css_class}>{html.escape(str(value))}</span>"
 
 
@@ -178,6 +181,10 @@ def form_value(form, field_name: str) -> str:
     if value is None:
         value = form.get(field_name, "")
     return str(value)
+
+
+def normalized_comment(form) -> str | None:
+    return normalize_comment(form_value(form, "コメント"))
 
 
 def school_select(selected: str | None) -> str:
@@ -232,6 +239,12 @@ def editable_review_rows(record: dict) -> str:
         "<tr><th>災害発生時の状況</th>"
         f"<td><textarea name='{FORM_FIELD_NAMES['災害発生時の状況']}' rows='8' maxlength='5000' required>{situation}</textarea></td></tr>"
     )
+    comment = html.escape(str(record.get("コメント") or ""))
+    rows.append(
+        "<tr><th>コメント（任意）</th>"
+        f"<td><textarea name='{FORM_FIELD_NAMES['コメント']}' rows='4' maxlength='{COMMENT_MAX_LENGTH}' "
+        f"placeholder='テスト時の気づきなど'>{comment}</textarea></td></tr>"
+    )
     return "".join(rows)
 
 
@@ -259,6 +272,7 @@ def confirmed_record_from_form(form) -> dict:
         **confirmed,
         "発生場所2（その他詳細）": other_location,
         "災害発生時の状況": situation,
+        "コメント": normalized_comment(form),
     }
 
 
@@ -485,6 +499,11 @@ async def analyze(request: Request):
             f"<td>{html.escape(field['evidence_text'] or '')}</td></tr>"
         )
     rows.append(f"<tr><th>災害発生時の状況</th><td colspan='3'>{html.escape(text)}</td></tr>")
+    rows.append(
+        "<tr><th>コメント（任意）</th><td colspan='3'>"
+        f"<textarea name='{FORM_FIELD_NAMES['コメント']}' rows='4' maxlength='{COMMENT_MAX_LENGTH}' "
+        "placeholder='テスト時の気づきなど（空欄でも保存できます）'></textarea></td></tr>"
+    )
     payload = html.escape(json.dumps(result, ensure_ascii=False))
     script = dependent_select_script()
     return page(
@@ -520,6 +539,7 @@ async def save(request: Request):
             confirmed["発生場所2"],
             form_value(form, "発生場所2（その他詳細）"),
         )
+        comment = normalized_comment(form)
     except (json.JSONDecodeError, ValidationError, ValueError, KeyError, TypeError) as exc:
         raise HTTPException(400, "保存内容が不正です") from exc
     record = {
@@ -530,6 +550,7 @@ async def save(request: Request):
         **confirmed,
         "発生場所2（その他詳細）": other_location,
         "災害発生時の状況": text,
+        "コメント": comment,
     }
     review_id = store.save(text, result, record)
     return page(
