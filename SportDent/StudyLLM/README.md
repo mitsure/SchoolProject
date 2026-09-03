@@ -96,7 +96,32 @@ SPORTDENT_EXTRACTOR=ollama SPORTDENT_OLLAMA_MODEL=qwen3:8b python run.py
 モデル名は設定で変更できます。M1・16GBでは、まず4-bit量子化された7B〜8B級を候補とし、実測した応答時間と精度で採否を決めます。
 構造化抽出ではQwen3の思考モードを無効にし、モデルを10分間メモリに保持して連続試験時の待ち時間を抑えます。
 
-### 一時的にインターネット公開する場合
+### Macのログイン時にStudyLLMを自動起動する
+
+次のスクリプトは公開用ユーザー名・パスワードを対話入力し、Git管理外の`.env`へ保存したうえで、macOSのLaunchAgentへStudyLLMを登録します。パスワードは12文字以上とし、仮パスワードをそのまま公開に使わないでください。
+
+```bash
+cd ~/Documents/SchoolProject/SportDent/StudyLLM
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+chmod +x scripts/install_macos_autostart.sh
+./scripts/install_macos_autostart.sh
+```
+
+設定後はMacへログインするとStudyLLMが起動し、異常終了時も自動的に再起動します。ログは`logs/studyllm.err.log`で確認できます。OllamaもmacOSの「ログイン項目」に追加して自動起動させます。
+
+### 固定URLでインターネット公開する場合
+
+独自ドメインを使わず固定HTTPS URLにする場合は、TailscaleをMacへインストールしてログインした後、次を一度実行します。初回はブラウザに表示されるFunnel有効化を承認します。
+
+```bash
+tailscale funnel --bg 8000
+tailscale funnel status
+```
+
+表示される`https://...ts.net`が外部端末用の固定URLです。`--bg`で設定したFunnelはTailscale再起動後にも公開を再開します。Macが起動中でも、スリープ中、ログアウト中、インターネット未接続、StudyLLMまたはOllama停止中は正常に利用できません。終了するときは`tailscale funnel 8000 off`を実行します。
+
+### Cloudflareで一時的にインターネット公開する場合
 
 公開用の独自パスワードと十分に長いセッション署名鍵を環境変数で設定して起動します。
 
@@ -109,7 +134,7 @@ SPORTDENT_OLLAMA_MODEL=qwen3:8b \
 python run.py
 ```
 
-別ターミナルで例えば`cloudflared tunnel --url http://localhost:8000`を実行し、表示されたHTTPS URLへ接続します。アプリ、Ollama、トンネルのいずれかを停止すると利用できなくなります。このMVPにはログイン失敗の回数制限がないため、匿名化した発表用データに限定し、終了後はすぐにトンネルを停止してください。
+別ターミナルで例えば`cloudflared tunnel --url http://localhost:8000`を実行し、表示されたHTTPS URLへ接続します。この方式のURLは起動ごとに変わります。アプリ、Ollama、トンネルのいずれかを停止すると利用できなくなります。このMVPにはログイン失敗の回数制限がないため、匿名化した発表用データに限定し、終了後はすぐにトンネルを停止してください。
 
 ## 開発原則
 
