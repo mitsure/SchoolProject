@@ -20,6 +20,33 @@ class DemographicsTest(unittest.TestCase):
         self.assertEqual(result["種別"], "歯牙障害")
         self.assertEqual(result["evidence"], "前歯")
 
+    def test_infer_chest_abdominal_type_from_rib_fracture(self):
+        result = infer_injury_type("電柱と激突し左の肋骨をおった。")
+        self.assertEqual(result["種別"], "胸腹部臓器障害")
+        self.assertIn("肋骨", result["evidence"])
+
+    def test_all_injury_types_have_practical_candidate_expressions(self):
+        examples = {
+            "外貌・露出部分の醜状障害": "実験中に左腕へ熱傷を負った。",
+            "視力・眼球運動障害": "ボールが右眼に当たり視力が低下した。",
+            "歯牙障害": "転倒して永久歯を折った。",
+            "精神・神経障害": "頭部を強打して脳挫傷となった。",
+            "手指切断・機能障害": "ドアで右中指を挟み負傷した。",
+            "胸腹部臓器障害": "転落して脾臓を損傷した。",
+            "上肢切断・機能障害": "転倒して右肘を骨折した。",
+            "下肢切断・機能障害": "着地時に左膝の靱帯を損傷した。",
+            "せき柱障害": "落下して腰椎を圧迫骨折した。",
+            "聴力障害": "大きな音を聞いた後に耳鳴りが続いた。",
+            "足指切断・機能障害": "右足の親指を骨折した。",
+            "そしゃく機能障害": "顎関節障害で食べることが困難になった。",
+        }
+        self.assertEqual(
+            {infer_injury_type(text)["種別"] for text in examples.values()},
+            set(INJURY_TYPE_VALUES),
+        )
+        for expected, text in examples.items():
+            self.assertEqual(infer_injury_type(text)["種別"], expected)
+
     def test_unknown_injury_type_remains_empty_and_invalid_value_is_rejected(self):
         self.assertIsNone(infer_injury_type("登校中に転倒した。")["種別"])
         validate_injury_type("歯牙障害")

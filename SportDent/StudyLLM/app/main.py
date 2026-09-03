@@ -479,7 +479,7 @@ async def analyze(request: Request):
     injury_evidence = html.escape(injury["evidence"] or "")
     rows = [
         f"<tr><th>種別</th><td>{select(FORM_FIELD_NAMES['種別'], INJURY_TYPE_VALUES, injury_value)}</td>"
-        f"<td>{'規則で補完' if injury_value else '人が選択'}</td><td>{injury_evidence}</td></tr>",
+        f"<td>{'規則で候補（要確認）' if injury_value else '人が選択'}</td><td>{injury_evidence}</td></tr>",
         f"<tr><th>被災学校種</th><td><select id='school' name='{FORM_FIELD_NAMES['被災学校種']}'>{''.join(schools)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
         f"<tr><th>被災学年</th><td><select id='grade' name='{FORM_FIELD_NAMES['被災学年']}'>{''.join(grades)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
         f"<tr><th>性別</th><td><select name='{FORM_FIELD_NAMES['性別']}'>{''.join(sexes)}</select></td><td>{'原文明記' if demo['性別'] else '人が選択'}</td><td></td></tr>",
