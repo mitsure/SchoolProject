@@ -57,14 +57,20 @@ def infer_demographics(text: str) -> dict[str, str | None]:
         (r"(?:中学校|中学|(?<![一-龥ぁ-んァ-ン])中)\s*([1-3１-３一二三])\s*(?:年生|年)?", "中"),
         (r"(?:高等学校|高校|(?<![一-龥ぁ-んァ-ン])高)\s*([1-3１-３一二三])\s*(?:年生|年)?", "高"),
     )
+    observed_person = re.compile(
+        r"^(?:の)?(?:弟|妹|兄|姉|友人|友達|同級生)"
+        r"(?:を[^。、]{0,8}(?:見|眺め|観察)|が[^。、]{0,15}(?:のを|ところを)(?:見|眺め|観察))"
+    )
+    candidates: list[tuple[bool, int, str, str, str]] = []
     for pattern, code in stage_patterns:
-        match = re.search(pattern, text)
-        if match:
+        for match in re.finditer(pattern, text):
             raw_grade = match.group(1).translate(full_width)
             candidate = numerals.get(raw_grade, raw_grade)
             if candidate in GRADE_RULES[code]:
-                school, grade, evidence = code, candidate, match.group(0)
-            break
+                tail = text[match.end():match.end() + 25]
+                candidates.append((bool(observed_person.search(tail)), match.start(), code, candidate, match.group(0)))
+    if candidates:
+        _, _, school, grade, evidence = min(candidates, key=lambda item: (item[0], item[1]))
     sex = None
     male = re.search(r"被災(?:した|者は)[^。]{0,8}(男子|男児|男の子)", text)
     female = re.search(r"被災(?:した|者は)[^。]{0,8}(女子|女児|女の子)", text)

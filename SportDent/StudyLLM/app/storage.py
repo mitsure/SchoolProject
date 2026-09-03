@@ -26,3 +26,13 @@ class ReviewStore:
                 (text, result["input_hash"], json.dumps(result, ensure_ascii=False), json.dumps(confirmed, ensure_ascii=False)),
             )
             return int(cur.lastrowid)
+
+    def list_confirmed(self) -> list[dict]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT id, created_at, confirmed_json FROM reviews ORDER BY id DESC"
+            ).fetchall()
+        return [
+            {"id": int(review_id), "created_at": created_at, "confirmed": json.loads(confirmed_json)}
+            for review_id, created_at, confirmed_json in rows
+        ]

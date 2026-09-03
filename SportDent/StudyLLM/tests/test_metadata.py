@@ -39,6 +39,18 @@ class DemographicsTest(unittest.TestCase):
         result = infer_demographics("授業中2人の生徒が衝突した。")
         self.assertIsNone(result["被災学校種"])
 
+    def test_victims_grade_wins_over_observed_younger_brothers_grade(self):
+        text = "中2の男子生徒が、自転車で登校中、ブランコで遊んでいる小学校一年生の弟を見ていて衝突した。"
+        result = infer_demographics(text)
+        self.assertEqual(result["被災学校種"], "中")
+        self.assertEqual(result["被災学年"], "2")
+        self.assertEqual(result["性別"], "男")
+
+    def test_observed_persons_earlier_grade_is_skipped(self):
+        text = "小学校一年生の弟を見ていたところ、中2の男子生徒が転倒した。"
+        result = infer_demographics(text)
+        self.assertEqual((result["被災学校種"], result["被災学年"]), ("中", "2"))
+
 
 if __name__ == "__main__":
     unittest.main()
