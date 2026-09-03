@@ -21,6 +21,34 @@ SCHOOL_LABELS = {
     "特中": "特別支援学校中学部", "特高": "特別支援学校高等部", "高専": "高等専門学校",
     "幼": "幼稚園", "保": "保育所等", "幼連": "幼保連携型認定こども園",
 }
+INJURY_TYPE_VALUES = (
+    "外貌・露出部分の醜状障害",
+    "視力・眼球運動障害",
+    "歯牙障害",
+    "精神・神経障害",
+    "手指切断・機能障害",
+    "胸腹部臓器障害",
+    "上肢切断・機能障害",
+    "下肢切断・機能障害",
+    "せき柱障害",
+    "聴力障害",
+    "足指切断・機能障害",
+    "そしゃく機能障害",
+)
+INJURY_TYPE_PATTERNS = (
+    ("歯牙障害", re.compile(r"前歯|奥歯|永久歯|乳歯|歯牙|歯折|歯の破折|歯(?:を|が)(?:折|欠|脱|損傷|打|ぶつけ)")),
+    ("視力・眼球運動障害", re.compile(r"視力・眼球運動障害|視力障害|眼球運動障害|失明")),
+    ("聴力障害", re.compile(r"聴力障害|難聴|耳が聞こえ")),
+    ("そしゃく機能障害", re.compile(r"そしゃく機能障害|咀嚼機能障害")),
+    ("せき柱障害", re.compile(r"せき柱障害|脊柱障害")),
+    ("手指切断・機能障害", re.compile(r"手指切断・機能障害|手指(?:を)?切断")),
+    ("足指切断・機能障害", re.compile(r"足指切断・機能障害|足指(?:を)?切断")),
+    ("上肢切断・機能障害", re.compile(r"上肢切断・機能障害|上肢(?:を)?切断")),
+    ("下肢切断・機能障害", re.compile(r"下肢切断・機能障害|下肢(?:を)?切断")),
+    ("胸腹部臓器障害", re.compile(r"胸腹部臓器障害")),
+    ("精神・神経障害", re.compile(r"精神・神経障害")),
+    ("外貌・露出部分の醜状障害", re.compile(r"外貌・露出部分の醜状障害|醜状障害")),
+)
 
 
 def load_metadata_choices(path: Path = DB_PATH) -> dict[str, list[str]]:
@@ -84,6 +112,24 @@ def infer_demographics(text: str) -> dict[str, str | None]:
         if subject:
             sex = "男" if subject.group(1) in ("男子生徒", "男児") else "女"
     return {"被災学校種": school, "被災学年": grade, "性別": sex, "evidence": evidence}
+
+
+def infer_injury_type(text: str) -> dict[str, str | None]:
+    """障害種別を高精度で判断できる明示表現だけから候補化する。"""
+    matches: list[tuple[int, str, str]] = []
+    for value, pattern in INJURY_TYPE_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            matches.append((match.start(), value, match.group(0)))
+    if not matches:
+        return {"種別": None, "evidence": None}
+    _, value, evidence = min(matches)
+    return {"種別": value, "evidence": evidence}
+
+
+def validate_injury_type(value: str | None) -> None:
+    if value is not None and value not in INJURY_TYPE_VALUES:
+        raise ValueError("種別が許容範囲外です")
 
 
 def validate_demographics(school: str | None, grade: str | None, sex: str | None) -> None:

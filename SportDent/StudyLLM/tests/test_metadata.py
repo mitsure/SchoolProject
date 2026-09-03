@@ -1,9 +1,31 @@
 import unittest
 
-from app.metadata import GRADE_RULES, infer_demographics, validate_demographics
+from app.metadata import (
+    GRADE_RULES,
+    INJURY_TYPE_VALUES,
+    infer_demographics,
+    infer_injury_type,
+    load_metadata_choices,
+    validate_demographics,
+    validate_injury_type,
+)
 
 
 class DemographicsTest(unittest.TestCase):
+    def test_injury_type_choices_match_existing_database(self):
+        self.assertEqual(set(INJURY_TYPE_VALUES), set(load_metadata_choices()["種別"]))
+
+    def test_infer_dental_injury_type_from_front_tooth_description(self):
+        result = infer_injury_type("中学2年生が電柱と激突し前歯をおった。")
+        self.assertEqual(result["種別"], "歯牙障害")
+        self.assertEqual(result["evidence"], "前歯")
+
+    def test_unknown_injury_type_remains_empty_and_invalid_value_is_rejected(self):
+        self.assertIsNone(infer_injury_type("登校中に転倒した。")["種別"])
+        validate_injury_type("歯牙障害")
+        with self.assertRaises(ValueError):
+            validate_injury_type("候補にない障害")
+
     def test_school_controls_allowed_grades(self):
         self.assertEqual(GRADE_RULES["小"], ["1", "2", "3", "4", "5", "6"])
         self.assertEqual(GRADE_RULES["中"], ["1", "2", "3"])

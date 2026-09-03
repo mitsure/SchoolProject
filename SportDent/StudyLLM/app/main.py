@@ -11,7 +11,15 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from .auth import AuthManager
 from .extractor import RuleBasedExtractor
 from .llm_extractor import LLMExtractor
-from .metadata import GRADE_RULES, SCHOOL_LABELS, infer_demographics, validate_demographics
+from .metadata import (
+    GRADE_RULES,
+    INJURY_TYPE_VALUES,
+    SCHOOL_LABELS,
+    infer_demographics,
+    infer_injury_type,
+    validate_demographics,
+    validate_injury_type,
+)
 from .ollama_client import OllamaClient
 from .storage import ReviewStore
 from .validator import ResultValidator, ValidationError
@@ -36,6 +44,7 @@ STATUS_LABELS = {
     "not_applicable": "非該当",
 }
 REVIEW_FIELDS = (
+    "種別",
     "被災学校種",
     "被災学年",
     "性別",
@@ -258,6 +267,7 @@ async def analyze(request: Request):
     except ValidationError as exc:
         raise HTTPException(500, str(exc)) from exc
 
+    injury = infer_injury_type(text)
     demo = infer_demographics(text)
     schools = ["<option value=''>未選択</option>"] + [
         f"<option value='{code}'{' selected' if demo['被災学校種'] == code else ''}>{html.escape(label)}</option>"
@@ -273,7 +283,11 @@ async def analyze(request: Request):
     ]
     demographic_status = "原文明記" if demo["被災学校種"] else "人が選択"
     evidence = html.escape(demo["evidence"] or "")
+    injury_value = injury["種別"]
+    injury_evidence = html.escape(injury["evidence"] or "")
     rows = [
+        f"<tr><th>種別</th><td>{select('種別', INJURY_TYPE_VALUES, injury_value)}</td>"
+        f"<td>{'規則で補完' if injury_value else '人が選択'}</td><td>{injury_evidence}</td></tr>",
         f"<tr><th>被災学校種</th><td><select id='school' name='被災学校種'>{''.join(schools)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
         f"<tr><th>被災学年</th><td><select id='grade' name='被災学年'>{''.join(grades)}</select></td><td>{demographic_status}</td><td>{evidence}</td></tr>",
         f"<tr><th>性別</th><td><select name='性別'>{''.join(sexes)}</select></td><td>{'原文明記' if demo['性別'] else '人が選択'}</td><td></td></tr>",
@@ -322,10 +336,12 @@ async def save(request: Request):
     try:
         result = json.loads(str(form.get("result_json", "")))
         validator.validate(text.strip(), result)
-        school, grade, sex = (
-            str(form.get(name, "")).strip() or None for name in ("被災学校種", "被災学年", "性別")
+        injury_type, school, grade, sex = (
+            str(form.get(name, "")).strip() or None
+            for name in ("種別", "被災学校種", "被災学年", "性別")
         )
         confirmed = {name: str(form.get(name, "")).strip() or None for name in result["fields"]}
+        validate_injury_type(injury_type)
         validate_demographics(school, grade, sex)
         validator.validate_confirmed(confirmed)
         other_location = validator.validate_other_location(
@@ -335,6 +351,7 @@ async def save(request: Request):
     except (json.JSONDecodeError, ValidationError, ValueError, KeyError, TypeError) as exc:
         raise HTTPException(400, "保存内容が不正です") from exc
     record = {
+        "種別": injury_type,
         "被災学校種": school,
         "被災学年": grade,
         "性別": sex,
