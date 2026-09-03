@@ -170,6 +170,7 @@ def index(request: Request):
           <label>ユーザー名<input name='username' autocomplete='username' required autofocus></label>
           <label>パスワード<input type='password' name='password' autocomplete='current-password' required></label>
           <button type='submit'>ログイン</button>
+          <p>この端末ではログイン状態を30日間保持します。</p>
         </form></section>"""
     )
 

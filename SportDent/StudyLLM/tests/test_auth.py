@@ -1,6 +1,6 @@
 import unittest
 
-from app.auth import AuthManager
+from app.auth import AuthManager, DEFAULT_SESSION_TTL_SECONDS
 
 
 class AuthManagerTest(unittest.TestCase):
@@ -18,6 +18,12 @@ class AuthManagerTest(unittest.TestCase):
         self.assertFalse(self.auth.verify_token(token, now=160))
         self.assertFalse(self.auth.verify_token(token + "x", now=101))
         self.assertFalse(self.auth.verify_token(None, now=101))
+
+    def test_default_session_is_kept_for_thirty_days(self):
+        auth = AuthManager(username="tester", password="secret-pass", secret="fixed-secret")
+        token = auth.issue_token(now=100)
+        self.assertTrue(auth.verify_token(token, now=100 + DEFAULT_SESSION_TTL_SECONDS - 1))
+        self.assertFalse(auth.verify_token(token, now=100 + DEFAULT_SESSION_TTL_SECONDS))
 
 
 if __name__ == "__main__":

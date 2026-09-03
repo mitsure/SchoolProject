@@ -11,6 +11,7 @@ import time
 
 DEFAULT_USERNAME = "admin"
 DEFAULT_PASSWORD = "StudyLLM2026"
+DEFAULT_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
 
 
 def _base64_encode(value: bytes) -> str:
@@ -29,7 +30,7 @@ class AuthManager:
         username: str | None = None,
         password: str | None = None,
         secret: str | bytes | None = None,
-        ttl_seconds: int = 8 * 60 * 60,
+        ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
     ):
         self.username = username or os.environ.get("SPORTDENT_USERNAME", DEFAULT_USERNAME)
         self.password = password or os.environ.get("SPORTDENT_PASSWORD", DEFAULT_PASSWORD)
