@@ -28,12 +28,12 @@ validator = ResultValidator()
 STATUS_LABELS = {
     "explicit": "原文明記",
     "derived": "規則で補完",
-    "not_mentioned": "記載なし（NULL）",
+    "not_mentioned": "記載なし",
     "ambiguous": "要確認（曖昧）",
     "conflict": "要確認（矛盾）",
-    "unsupported": "候補外（NULL）",
-    "validation_rejected": "検証で除外（NULL）",
-    "not_applicable": "非該当（NULL）",
+    "unsupported": "候補外",
+    "validation_rejected": "検証で除外",
+    "not_applicable": "非該当",
 }
 REVIEW_FIELDS = (
     "被災学校種",
@@ -127,7 +127,7 @@ def request_uses_https(request: Request) -> bool:
     return forwarded == "https" or request.url.scheme == "https"
 
 
-def select(name: str, values, selected=None, *, element_id=None, null_label="未選択（NULL）") -> str:
+def select(name: str, values, selected=None, *, element_id=None, null_label="ー") -> str:
     options = [f"<option value=''>{html.escape(null_label)}</option>"]
     for value in values:
         escaped = html.escape(value)
@@ -139,7 +139,7 @@ def select(name: str, values, selected=None, *, element_id=None, null_label="未
 
 def display_review_value(name: str, value) -> str:
     if value is None or value == "":
-        return "<span class='null'>NULL</span>"
+        return "<span class='null'>ー</span>"
     if name == "被災学校種":
         value = SCHOOL_LABELS.get(str(value), value)
     elif name == "被災学年":
