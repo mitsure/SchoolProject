@@ -35,6 +35,7 @@ INJURY_TYPE_VALUES = (
     "足指切断・機能障害",
     "そしゃく機能障害",
 )
+INJURY_TYPE_RULE_VERSION = "injury-type-rules-002"
 # 種別は事故直後の傷病名ではなく後遺障害の区分であるため、あくまで確認候補。
 # 身体部位だけでは決めず、「部位＋受傷」または特徴的な診断・機能障害を必要とする。
 INJURY_TYPE_PATTERNS = (

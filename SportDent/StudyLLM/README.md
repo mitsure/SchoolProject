@@ -81,6 +81,15 @@ cd SportDent/StudyLLM
 PYTHONPATH=. python -m evaluation.evaluate_silver --output /tmp/sportdent-silver-report.json
 ```
 
+種別判定を歯牙障害スクリーニングとして評価する場合は、次を実行します。感度・特異度・陽性的中率等の95% Wilson信頼区間、全12種別の混同行列、偽陽性・偽陰性の原文一覧、盲検誤答監査用標本、誤答群と正答群の2-gram比較を`evaluation_output/injury_screening/`へ出力します。この保存先は原文を含むためGit管理外です。
+
+```bash
+python -m pip install -r evaluation/requirements.txt
+PYTHONPATH=. python -m evaluation.evaluate_injury_screening
+```
+
+この評価は既存DB登録値との開発診断です。種別候補は現時点では決定論的規則が担当しているため、結果をローカルLLM単体の精度とは表現しません。また、規則作成時に同じDBを参照しており、DB値が原文だけから再現できない事例もあるため、学会発表の最終性能には凍結版を人手gold standardまたは独立データで評価します。
+
 `app/llm_extractor.py`にはプロバイダー交換可能なLLM接続口があります。LLMには項目ごとの値と根拠だけを返させ、状態・根拠位置等はプログラムで生成します。不正な候補は項目単位で棄却し、他の正常な候補は確認画面へ残します。通信障害またはJSON全体の不正時だけ処理全体を停止します。
 登校中・通学方法等の決定論的な辞書と項目依存規則はLLM出力より優先します。また、「滑り台で遊んでいる弟を見ていた」等の他者の活動は、被災者の発生場所・競技・遊具として採用しません。
 確認結果には任意のコメントを付けて保存できます。コメントは空欄でもよく、保存後もDB一覧の編集画面から追記・修正できます。

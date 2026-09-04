@@ -12,4 +12,5 @@ SportDent/StudyLLM/data/*.sqlite3
 SportDent/StudyLLM/data/
 SportDent/StudyLLM/.env
 SportDent/StudyLLM/logs/
+SportDent/StudyLLM/evaluation_output/
 __pycache__/
