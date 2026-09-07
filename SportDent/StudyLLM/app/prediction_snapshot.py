@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import json
 import os
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .llm_extractor import PROMPT_VERSION
@@ -34,7 +34,7 @@ def build_metadata(extractor, elapsed_ms: int) -> dict:
         "source_fingerprint": fingerprint.hexdigest(),
     }
     version = hashlib.sha256(json.dumps(configuration, sort_keys=True).encode()).hexdigest()[:16]
-    return {**configuration, "version": version, "executed_at": datetime.now(UTC).isoformat(),
+    return {**configuration, "version": version, "executed_at": datetime.now(timezone.utc).isoformat(),
             "elapsed_ms": elapsed_ms, "processing_status": "success"}
 
 

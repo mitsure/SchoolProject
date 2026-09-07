@@ -6,7 +6,7 @@ import io
 import json
 import os
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -636,7 +636,7 @@ def export_research(request: Request):
     if not is_authenticated(request):
         return login_redirect()
     _, records, filters, summary = research_selection(request)
-    report = {"schema_version": "research-001", "generated_at": datetime.now(UTC).isoformat(),
+    report = {"schema_version": "research-001", "generated_at": datetime.now(timezone.utc).isoformat(),
               "reference_type": "single_review", "filters": filters, "summary": summary, "records": records,
               "notes": ["人手一次評価との比較。独立したgold standard評価ではありません。",
                         "処理成功・確定保存済みのみ。原文を含むため保管先に注意してください。",

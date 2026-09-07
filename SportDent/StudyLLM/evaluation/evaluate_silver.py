@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.extractor import RuleBasedExtractor
@@ -44,7 +44,7 @@ def evaluate(db_path: Path, limit: int | None = None) -> dict:
     return {
         "report_type": "development_diagnostic_against_silver_labels",
         "warning": "既存DB値はsilver labelであり、原文から判定可能なgold standardではない。最終性能として使用しない。",
-        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_file": db_path.name,
         "rows": rows,
         "processing": processing,

@@ -7,7 +7,7 @@ import json
 import random
 import re
 from collections import Counter, defaultdict
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -109,7 +109,7 @@ def evaluate_rows(rows: list[dict], target: str = "歯牙障害") -> tuple[dict,
             "既存DBの種別はsilver labelであり、事故文だけから再現できるgold standardではない。"
             "同じDBを規則開発にも参照しているため、学会発表で最終的な外部性能として扱わない。"
         ),
-        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "rule_version": INJURY_TYPE_RULE_VERSION,
         "target": target,
         "rows": len(details),
