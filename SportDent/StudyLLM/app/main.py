@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import html
+import csv
+import io
 import json
 import os
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from .auth import AuthManager
 from .extractor import RuleBasedExtractor
@@ -22,6 +26,9 @@ from .metadata import (
 )
 from .ollama_client import OllamaClient
 from .review_comment import COMMENT_MAX_LENGTH, normalize_comment
+from .prediction_snapshot import build_metadata, sign_snapshot, verify_snapshot
+from .research import parse_assessment, record_version, summarize_records
+from .research_views import assessment_page, dashboard_page
 from .storage import ReviewStore
 from .validator import ResultValidator, ValidationError
 
@@ -111,6 +118,7 @@ def page(body: str, *, authenticated: bool = False) -> str:
           <a href='/menu'>メニュー</a>
           <a href='/new'>新規登録</a>
           <a href='/reviews'>DBを見る</a>
+          <a href='/dashboard'>研究評価</a>
           <form class='inline' method='post' action='/logout'><button type='submit'>ログアウト</button></form>
         </nav>
         """
@@ -130,6 +138,11 @@ def page(body: str, *, authenticated: bool = False) -> str:
     .actions{{display:flex;gap:1rem;flex-wrap:wrap;margin:1.5rem 0}} nav{{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:.7rem 0;border-bottom:1px solid #ddd}}
     nav .inline{{margin-left:auto}} nav button{{padding:.35rem .65rem;background:white;color:#315efb}} .other-location{{display:block;margin-top:.5rem}}
     .record{{margin:1.5rem 0;padding:1rem;border:1px solid #ccc;border-radius:.5rem}} .record h2{{margin-top:0}} .null{{color:#777}} .situation{{white-space:pre-wrap}}
+    .metric-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin:1rem 0}}
+    .metric-card{{padding:1rem;background:#f3f6ff;border:1px solid #d9e2ff;border-radius:.5rem}}
+    .metric-card strong{{display:block;font-size:1.6rem;margin:.4rem 0}} small{{color:#555}}
+    .table-scroll{{overflow-x:auto}} meter{{display:block;width:100%;margin-top:.4rem}}
+    .correct{{background:#e8f5ec}} .incorrect{{background:#fff0e8}} details{{margin:.7rem 0}}
     @media(max-width:700px){{body{{margin:1rem auto}} td,th{{font-size:.9rem}}}}
   </style>
 </head>
@@ -332,6 +345,7 @@ def menu(request: Request):
         """<h2>メニュー</h2><div class='actions'>
         <a class='button' href='/new'>新規登録</a>
         <a class='button secondary' href='/reviews'>DBを見る</a>
+        <a class='button secondary' href='/dashboard'>研究評価ダッシュボード</a>
         </div>""",
         authenticated=True,
     )
@@ -367,6 +381,7 @@ def reviews(request: Request):
             f"<section class='record'><h2>ID: {review['id']}</h2>"
             f"<p>保存日時（UTC）: {html.escape(str(review['created_at']))}</p><table>{rows}</table>"
             f"<div class='actions'><a class='button secondary' href='/reviews/{review['id']}/edit'>編集</a>"
+            f"<a class='button secondary' href='/reviews/{review['id']}/assess'>研究用の人手評価</a>"
             f"<a class='button danger' href='/reviews/{review['id']}/delete'>削除</a></div></section>"
         )
     return page(f"<h2>保存済みデータ（{len(saved_reviews)}件）</h2>{''.join(sections)}", authenticated=True)
@@ -448,6 +463,7 @@ async def analyze(request: Request):
         return login_redirect()
     form = await request.form()
     text = str(form.get("text", ""))
+    started = time.perf_counter()
     result = extractor.extract(text)
     if result["processing_status"] == "error":
         return page(
@@ -461,6 +477,14 @@ async def analyze(request: Request):
 
     injury = infer_injury_type(text)
     demo = infer_demographics(text)
+    snapshot = {
+        "text": text, "result": result,
+        "prediction": {"種別": injury["種別"], **{name: demo[name] for name in ("被災学校種", "被災学年", "性別")},
+                       **{name: field["value"] for name, field in result["fields"].items()}},
+        "metadata": {**build_metadata(extractor, round((time.perf_counter() - started) * 1000)),
+                     "injury_evidence": injury["evidence"], "demographic_evidence": demo["evidence"]},
+    }
+    snapshot_json, snapshot_signature = sign_snapshot(snapshot, auth.secret)
     schools = ["<option value=''>未選択</option>"] + [
         f"<option value='{code}'{' selected' if demo['被災学校種'] == code else ''}>{html.escape(label)}</option>"
         for code, label in SCHOOL_LABELS.items()
@@ -504,11 +528,10 @@ async def analyze(request: Request):
         f"<textarea name='{FORM_FIELD_NAMES['コメント']}' rows='4' maxlength='{COMMENT_MAX_LENGTH}' "
         "placeholder='テスト時の気づきなど（空欄でも保存できます）'></textarea></td></tr>"
     )
-    payload = html.escape(json.dumps(result, ensure_ascii=False))
     script = dependent_select_script()
     return page(
-        f"<form method='post' action='/save'><input type='hidden' name='text' value='{html.escape(text)}'>"
-        f"<input type='hidden' name='result_json' value='{payload}'><table><tr><th>項目</th><th>候補（修正可）</th><th>状態</th><th>根拠</th></tr>{''.join(rows)}</table>"
+        f"<form method='post' action='/save'><input type='hidden' name='snapshot_json' value='{html.escape(snapshot_json)}'>"
+        f"<input type='hidden' name='snapshot_signature' value='{snapshot_signature}'><table><tr><th>項目</th><th>候補（修正可）</th><th>状態</th><th>根拠</th></tr>{''.join(rows)}</table>"
         "<p><label><input type='checkbox' name='confirmed' value='yes' required> 全項目を確認しました</label></p>"
         "<p><button type='button' class='secondary' onclick='history.back()'>入力画面へ戻る</button> <button type='submit'>確定保存</button></p></form>"
         f"{script}",
@@ -523,9 +546,9 @@ async def save(request: Request):
     form = await request.form()
     if form.get("confirmed") != "yes":
         raise HTTPException(400, "全項目の確認が必要です")
-    text = str(form.get("text", ""))
     try:
-        result = json.loads(str(form.get("result_json", "")))
+        snapshot = verify_snapshot(str(form.get("snapshot_json", "")), str(form.get("snapshot_signature", "")), auth.secret)
+        text, result = snapshot["text"], snapshot["result"]
         validator.validate(text.strip(), result)
         injury_type, school, grade, sex = (
             form_value(form, name).strip() or None
@@ -541,7 +564,7 @@ async def save(request: Request):
         )
         comment = normalized_comment(form)
     except (json.JSONDecodeError, ValidationError, ValueError, KeyError, TypeError) as exc:
-        raise HTTPException(400, "保存内容が不正です") from exc
+        raise HTTPException(400, "保存内容が不正です。更新・再起動前の確認画面の場合は再度解析してください。") from exc
     record = {
         "種別": injury_type,
         "被災学校種": school,
@@ -552,9 +575,88 @@ async def save(request: Request):
         "災害発生時の状況": text,
         "コメント": comment,
     }
-    review_id = store.save(text, result, record)
+    review_id = store.save(text, result, record, prediction=snapshot["prediction"], metadata=snapshot["metadata"])
     return page(
         f"<p>確認結果を保存しました（ID: {review_id}）。</p>"
         "<div class='actions'><a class='button' href='/new'>次を入力</a><a class='button secondary' href='/reviews'>DBを見る</a></div>",
         authenticated=True,
     )
+
+
+@app.get("/reviews/{review_id}/assess", response_class=HTMLResponse)
+def assess_review(request: Request, review_id: int):
+    if not is_authenticated(request):
+        return login_redirect()
+    records = store.research_records(review_id)
+    if not records:
+        raise HTTPException(404, "保存データが見つかりません")
+    return page(assessment_page(records[0], validator, store.assessment_history(review_id)), authenticated=True)
+
+
+@app.post("/reviews/{review_id}/assess")
+async def save_research_assessment(request: Request, review_id: int):
+    if not is_authenticated(request):
+        return login_redirect()
+    form = await request.form()
+    try:
+        assessment = parse_assessment(form, validator)
+        expected_id = int(form["expected_id"]) if form.get("expected_id") else None
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    try:
+        store.save_assessment(review_id, assessment, expected_id=expected_id)
+    except KeyError as exc:
+        raise HTTPException(404, "保存データが見つかりません") from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return RedirectResponse(url=f"/reviews/{review_id}/assess", status_code=303)
+
+
+def research_selection(request: Request):
+    all_records = store.research_records()
+    default_version = record_version(all_records[0]) if all_records else "legacy"
+    filters = {key: request.query_params.get(key, default_version if key == "version" else "")
+               for key in ("version", "dataset", "split", "sampling")}
+    records = [row for row in all_records if record_version(row) == filters["version"] and all(
+        not filters[key] or (row["assessment"] or {}).get(key) == filters[key] for key in ("dataset", "split", "sampling")
+    )]
+    return all_records, records, filters, summarize_records(records)
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def research_dashboard(request: Request):
+    if not is_authenticated(request):
+        return login_redirect()
+    all_records, records, filters, summary = research_selection(request)
+    return page(dashboard_page(records, all_records, summary, filters), authenticated=True)
+
+
+@app.get("/dashboard/export.json")
+def export_research(request: Request):
+    if not is_authenticated(request):
+        return login_redirect()
+    _, records, filters, summary = research_selection(request)
+    report = {"schema_version": "research-001", "generated_at": datetime.now(UTC).isoformat(),
+              "reference_type": "single_review", "filters": filters, "summary": summary, "records": records,
+              "notes": ["人手一次評価との比較。独立したgold standard評価ではありません。",
+                        "処理成功・確定保存済みのみ。原文を含むため保管先に注意してください。",
+                        "歯牙障害候補なしはスクリーニングで検出なし。人手判定不能は除外。",
+                        "同一原文・同一版の最新の有効な評価を1件採用。"]}
+    return Response(json.dumps(report, ensure_ascii=False, indent=2), media_type="application/json",
+                    headers={"Content-Disposition": 'attachment; filename="research-evaluation.json"'})
+
+
+@app.get("/dashboard/errors.csv")
+def export_research_errors(request: Request):
+    if not is_authenticated(request):
+        return login_redirect()
+    _, _, _, summary = research_selection(request)
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=("review_id", "field", "predicted", "gold", "category", "text", "version", "reviewer"))
+    writer.writeheader()
+    for row in summary["errors"]:
+        # Prevent spreadsheet applications from interpreting user text as a formula.
+        writer.writerow({key: "'" + value if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")) else value
+                         for key, value in row.items()})
+    return Response("\ufeff" + output.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="research-errors.csv"'})
