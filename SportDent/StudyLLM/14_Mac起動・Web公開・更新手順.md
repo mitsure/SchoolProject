@@ -86,6 +86,67 @@ open http://127.0.0.1:4040
 
 `127.0.0.1:8000`でStudyLLMが表示され、`127.0.0.1:4040`の`Forwarding`に公開URLが表示されれば復旧完了です。
 
+### 接続できない場合
+
+まず、どちらの画面が開かないかを確認します。
+
+- `8000`が開く、`4040`が開かない：StudyLLMは正常で、ngrokが停止しています。
+- `8000`が開かない：StudyLLMが停止しています。
+- 両方開くが判定が終わらない：Ollamaが停止している可能性があります。
+
+#### 8000は開くが、4040が開かない場合
+
+次を実行してngrokの自動起動設定を再登録します。
+
+```bash
+cd ~/Documents/SchoolProject/SportDent/StudyLLM
+chmod +x scripts/install_ngrok_autostart.sh
+./scripts/install_ngrok_autostart.sh
+open http://127.0.0.1:4040
+```
+
+今回のMac更新後は、次のエラーが表示されました。
+
+```text
+Could not find service "jp.sportdent.ngrok" in domain for user gui: 501
+```
+
+これはngrok本体や認証トークンの問題ではなく、macOSの自動起動サービスからngrokの登録が外れていた状態です。`install_ngrok_autostart.sh`による再登録で復旧しました。
+
+#### 8000が開かない場合
+
+まずStudyLLMを再起動します。
+
+```bash
+launchctl kickstart -k gui/$(id -u)/jp.sportdent.studyllm
+open http://127.0.0.1:8000
+```
+
+ここでも`Could not find service`が表示された場合は、次を実行して自動起動設定を再登録します。
+
+```bash
+cd ~/Documents/SchoolProject/SportDent/StudyLLM
+source .venv/bin/activate
+./scripts/install_macos_autostart.sh
+open http://127.0.0.1:8000
+```
+
+このスクリプトでは、公開用ユーザー名と12文字以上のパスワードをもう一度設定します。保存済みDBは削除されませんが、既にログインしている端末では再ログインが必要になります。
+
+#### 画面は開くが、判定が終わらない場合
+
+「アプリケーション」からOllamaを起動し、次でモデルを確認します。
+
+```bash
+ollama list
+```
+
+`qwen3:8b`が表示されたら、もう一度StudyLLMで判定します。
+
+#### 8000と4040は開くが、iPadから接続できない場合
+
+`http://127.0.0.1:4040`を開き、`Forwarding`に現在表示されている`https://...ngrok-free...`を使います。Macがインターネットに接続され、スリープしていないことも確認します。
+
 研究発表中など、Macをスリープさせたくないときは別のターミナルで次を実行し、そのターミナルを開いたままにします。
 
 ```bash
