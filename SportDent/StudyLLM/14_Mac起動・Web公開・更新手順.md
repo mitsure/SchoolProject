@@ -159,21 +159,58 @@ caffeinate -dimsu
 
 ## 3. GitHub側のデータやプログラムを更新したとき
 
-Codex等でGitHub上のStudyLLMを更新した後、Mac側へ最新版を反映します。
+Codex等でGitHub上のStudyLLMを更新した後、Mac側へ最新版を反映します。Mac本体の再起動は不要です。以下をひと区切りずつ実行してください。
+
+### 3-1. 更新を取得して確認する
 
 ```bash
 cd ~/Documents/SchoolProject
-git pull origin main
-cd SportDent/StudyLLM
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-launchctl kickstart -k gui/$(id -u)/jp.sportdent.studyllm
-launchctl kickstart -k gui/$(id -u)/jp.sportdent.ngrok
-open http://127.0.0.1:8000
-open http://127.0.0.1:4040
+git pull --ff-only origin main
+git log -1 --oneline
 ```
 
-これで、更新後のStudyLLMと公開URLを確認できます。
+最後に表示されたコミット番号・説明を、更新時に案内された内容と照らし合わせます。より新しい更新がある場合は、そのコミットが表示されます。
+
+`git pull`にエラーが出た場合は、ここで止めてエラー内容を確認してください。`Already up to date.`は正常ですが、案内された修正が含まれているかも確認します。
+
+今回の起動エラーは、修正前の`8cf2044`のまま起動していたことが原因でした。修正コミット`7652c02`を取得して再起動すると復旧しました。この番号は今回の記録であり、今後の更新で毎回一致させる番号ではありません。
+
+手順書だけの更新なら、ここで完了です。以下の再起動は不要です。
+
+### 3-2. プログラムを更新した場合はStudyLLMを再起動する
+
+```bash
+cd ~/Documents/SchoolProject/SportDent/StudyLLM
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+エラーがなければ、次を実行します。
+
+```bash
+launchctl kickstart -k gui/$(id -u)/jp.sportdent.studyllm
+```
+
+数秒待ってから画面を開きます。再起動コマンドがエラーなしで終わっても、アプリが起動できたとは限らないため、画面まで確認してください。
+
+```bash
+open http://127.0.0.1:8000
+```
+
+ログイン画面が開いたら、いつもの公開URLでも確認します。ngrokが動いていれば、再設定・再起動は不要です。
+
+開かない場合は、次の結果で起動エラーを確認します。
+
+```bash
+cd ~/Documents/SchoolProject
+git log -1 --oneline
+curl -I --max-time 5 http://127.0.0.1:8000
+tail -n 40 SportDent/StudyLLM/logs/studyllm.err.log
+```
+
+相談するときは、この実行結果だけを共有してください。ローカル画面は開くのに公開URLだけ開かない場合は、「2. 接続できない場合」のngrokの手順を使います。
+
+画面上でデータを保存・編集しただけなら、`git pull`も再起動も不要です。
 
 なお、画面から「確定保存」したデータは次のファイルに保存されています。
 
