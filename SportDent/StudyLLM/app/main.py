@@ -118,7 +118,6 @@ def page(body: str, *, authenticated: bool = False) -> str:
           <a href='/menu'>メニュー</a>
           <a href='/new'>新規登録</a>
           <a href='/reviews'>DBを見る</a>
-          <a href='/dashboard'>研究評価</a>
           <form class='inline' method='post' action='/logout'><button type='submit'>ログアウト</button></form>
         </nav>
         """
@@ -345,7 +344,6 @@ def menu(request: Request):
         """<h2>メニュー</h2><div class='actions'>
         <a class='button' href='/new'>新規登録</a>
         <a class='button secondary' href='/reviews'>DBを見る</a>
-        <a class='button secondary' href='/dashboard'>研究評価ダッシュボード</a>
         </div>""",
         authenticated=True,
     )
@@ -381,7 +379,6 @@ def reviews(request: Request):
             f"<section class='record'><h2>ID: {review['id']}</h2>"
             f"<p>保存日時（UTC）: {html.escape(str(review['created_at']))}</p><table>{rows}</table>"
             f"<div class='actions'><a class='button secondary' href='/reviews/{review['id']}/edit'>編集</a>"
-            f"<a class='button secondary' href='/reviews/{review['id']}/assess'>研究用の人手評価</a>"
             f"<a class='button danger' href='/reviews/{review['id']}/delete'>削除</a></div></section>"
         )
     return page(f"<h2>保存済みデータ（{len(saved_reviews)}件）</h2>{''.join(sections)}", authenticated=True)
