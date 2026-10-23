@@ -47,7 +47,11 @@ class AuthManager:
         return self.username == DEFAULT_USERNAME and self.password == DEFAULT_PASSWORD
 
     def authenticate(self, username: str, password: str) -> bool:
-        return hmac.compare_digest(username, self.username) and hmac.compare_digest(password, self.password)
+        # compare_digest only accepts ASCII for str operands; UTF-8 bytes
+        # support Japanese and full-width input while retaining exact matching.
+        username_matches = hmac.compare_digest(username.encode("utf-8"), self.username.encode("utf-8"))
+        password_matches = hmac.compare_digest(password.encode("utf-8"), self.password.encode("utf-8"))
+        return username_matches and password_matches
 
     def issue_token(self, *, now: int | None = None) -> str:
         issued_at = int(time.time() if now is None else now)

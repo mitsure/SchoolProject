@@ -80,6 +80,32 @@ class ResearchWebTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status, 200)
         return self.store.research_records()[0], form
 
+    async def test_unicode_login_is_accepted_or_rejected_without_server_error(self):
+        from app.auth import AuthManager
+
+        # The launcher's unauthenticated readiness check must work too.
+        status, _, body = await self.request("/", authenticated=False)
+        self.assertEqual(status, 200)
+        self.assertIn("ログイン", body)
+        for username, password in (("ｔｅｓｔｅｒ", "pass"), ("tester", "パスワード")):
+            with self.subTest(username=username):
+                status, headers, body = await self.request(
+                    "/login", {"username": username, "password": password}, authenticated=False)
+                self.assertEqual(status, 401)
+                self.assertNotIn(b"set-cookie", headers)
+                self.assertIn("ログイン失敗", body)
+
+        auth = AuthManager(username="研究者", password="試験用パスワード１２３", secret="fixed")
+        with patch.object(self.main, "auth", auth):
+            status, headers, _ = await self.request(
+                "/login", {"username": auth.username, "password": auth.password}, authenticated=False)
+            self.assertEqual(status, 303)
+            self.assertEqual(headers[b"location"], b"/menu")
+            from http.cookies import SimpleCookie
+            cookies = SimpleCookie()
+            cookies.load(headers[b"set-cookie"].decode())
+            self.assertTrue(auth.verify_token(cookies[auth.COOKIE_NAME].value))
+
     async def test_workflow_snapshot_assessment_dashboard_and_exports(self):
         row, form = await self.save_example()
         self.assertEqual(row["prediction"]["種別"], "歯牙障害")

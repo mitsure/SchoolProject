@@ -9,11 +9,50 @@ trap 'echo "処理を停止しました。上のエラーを確認してくだ�
 fail() { echo "$1" >&2; exit 1; }
 wait_http() {
     local endpoint="$1" attempts=0
-    until curl --fail --silent --max-time 2 "$endpoint" >/dev/null; do
+    until curl --noproxy '*' --fail --silent --max-time 2 "$endpoint" >/dev/null; do
         attempts=$((attempts + 1))
         [ "$attempts" -lt 30 ] || return 1
         sleep 1
     done
+}
+
+log_size() {
+    if [ -f "$1" ]; then wc -c < "$1"; else echo 0; fi
+}
+
+show_new_log() {
+    local path="$1" previous_size="$2" current_size
+    current_size="$(log_size "$path")"
+    echo "$path（今回の起動操作以降・最大30行）:"
+    if [ "$current_size" -gt "$previous_size" ]; then
+        tail -c "+$((previous_size + 1))" "$path" | tail -n 30
+    elif [ "$current_size" -lt "$previous_size" ]; then
+        echo "ログが短くなったため、今回分を特定できません。"
+    else
+        echo "新しいログはありません。"
+    fi
+}
+
+show_app_diagnostics() {
+    local http_code curl_status=0 service_status
+    http_code="$(curl --noproxy '*' --silent --show-error --max-time 2 \
+        --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8000)" || curl_status=$?
+    if [ "$curl_status" -eq 0 ]; then
+        echo "ローカル接続確認: HTTP $http_code"
+    else
+        echo "ローカル接続確認に失敗しました（curl終了コード: $curl_status、HTTP: $http_code）。"
+    fi
+    # Do not print the full service record: custom setups may include secrets.
+    service_status="$(launchctl print "gui/$user_id/$app_label" 2>/dev/null \
+        | sed -n -E '/^[[:space:]]*(state|pid|last exit code|last terminating signal) = /p')"
+    echo "StudyLLMサービスの状態:"
+    if [ -n "$service_status" ]; then
+        printf '%s\n' "$service_status"
+    else
+        echo "状態を取得できませんでした。"
+    fi
+    show_new_log logs/studyllm.err.log "$app_err_offset"
+    show_new_log logs/studyllm.out.log "$app_out_offset"
 }
 
 [ "$(uname -s)" = Darwin ] || fail "このボタンはMac専用です。"
@@ -47,6 +86,8 @@ wait_http http://127.0.0.1:11434/api/tags || fail "Ollamaが起動しません�
 user_id="$(id -u)"
 app_label="jp.sportdent.studyllm"
 app_plist="$HOME/Library/LaunchAgents/$app_label.plist"
+app_err_offset="$(log_size logs/studyllm.err.log)"
+app_out_offset="$(log_size logs/studyllm.out.log)"
 echo "StudyLLMを起動しています…"
 if ! launchctl print "gui/$user_id/$app_label" >/dev/null 2>&1; then
     [ -f "$app_plist" ] || fail "StudyLLMの自動起動設定がありません。手順書の初回設定を行ってください。"
@@ -54,13 +95,13 @@ if ! launchctl print "gui/$user_id/$app_label" >/dev/null 2>&1; then
 fi
 launchctl kickstart -k "gui/$user_id/$app_label"
 if ! wait_http http://127.0.0.1:8000; then
-    echo "StudyLLMの起動に失敗しました。直近のログ："
-    tail -n 30 logs/studyllm.err.log || true
+    echo "StudyLLMの起動確認に失敗しました。今回の接続状態とログ："
+    show_app_diagnostics
     fail "ここまでのエラーを確認してください。"
 fi
 
 echo "公開接続を確認しています…"
-if ! curl --fail --silent --max-time 2 http://127.0.0.1:4040/api/tunnels >/dev/null; then
+if ! curl --noproxy '*' --fail --silent --max-time 2 http://127.0.0.1:4040/api/tunnels >/dev/null; then
     bash scripts/install_ngrok_autostart.sh
 fi
 wait_http http://127.0.0.1:4040/api/tunnels || fail "ngrokが起動しません。logs/ngrok.err.logを確認してください。"
@@ -72,7 +113,8 @@ for attempt in {1..30}; do
 import json
 import urllib.request
 try:
-    with urllib.request.urlopen("http://127.0.0.1:4040/api/tunnels", timeout=2) as response:
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open("http://127.0.0.1:4040/api/tunnels", timeout=2) as response:
         tunnels = json.load(response).get("tunnels", [])
     for tunnel in tunnels:
         url = tunnel.get("public_url", "")
