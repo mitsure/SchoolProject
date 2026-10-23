@@ -47,10 +47,11 @@ class MacOSUpdateTest(unittest.TestCase):
         self.shell_hooks = self.directory / "shell-hooks.sh"
         self.shell_hooks.write_text(
             "uname() { printf '%s\\n' Darwin; }\n"
-            'if [ "${1-}" = updated ]; then\n'
-            '    printf "%s\\n" updated > "$TEST_UPDATED_STAGE"\n'
-            "    exit 0\n"
-            "fi\n",
+            # Bash 3.2 reads BASH_ENV before assigning script arguments.
+            # Wait until the script itself has read its mode to stop the
+            # updated stage before any real dependency or service operations.
+            'trap \'if [ "${mode-}" = updated ]; then '
+            'printf "%s\\n" updated > "$TEST_UPDATED_STAGE"; exit 0; fi\' DEBUG\n',
             encoding="utf-8",
         )
 

@@ -23,7 +23,7 @@ log_size() {
 show_new_log() {
     local path="$1" previous_size="$2" current_size
     current_size="$(log_size "$path")"
-    echo "$path（今回の起動操作以降・最大30行）:"
+    printf '%s（今回の起動操作以降・最大30行）:\n' "$path"
     if [ "$current_size" -gt "$previous_size" ]; then
         tail -c "+$((previous_size + 1))" "$path" | tail -n 30
     elif [ "$current_size" -lt "$previous_size" ]; then
@@ -38,9 +38,9 @@ show_app_diagnostics() {
     http_code="$(curl --noproxy '*' --silent --show-error --max-time 2 \
         --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8000)" || curl_status=$?
     if [ "$curl_status" -eq 0 ]; then
-        echo "ローカル接続確認: HTTP $http_code"
+        printf 'ローカル接続確認: HTTP %s\n' "$http_code"
     else
-        echo "ローカル接続確認に失敗しました（curl終了コード: $curl_status、HTTP: $http_code）。"
+        printf 'ローカル接続確認に失敗しました（curl終了コード: %s、HTTP: %s）。\n' "$curl_status" "$http_code"
     fi
     # Do not print the full service record: custom setups may include secrets.
     service_status="$(launchctl print "gui/$user_id/$app_label" 2>/dev/null \

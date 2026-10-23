@@ -108,7 +108,10 @@ curl() {
     def test_connection_failure_shows_only_new_logs_and_filtered_service_state(self):
         result = self.run_launcher("new_error")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("curl終了コード: 7", result.stdout)
+        self.assertIn("ローカル接続確認に失敗しました（curl終了コード: 7、HTTP: 000）。", result.stdout)
+        self.assertIn("logs/studyllm.err.log（今回の起動操作以降・最大30行）:", result.stdout)
+        self.assertIn("logs/studyllm.out.log（今回の起動操作以降・最大30行）:", result.stdout)
+        self.assertNotIn("unbound variable", result.stderr)
         self.assertIn("state = exited", result.stdout)
         self.assertIn("pid = 1234", result.stdout)
         self.assertIn("last exit code = 1", result.stdout)
