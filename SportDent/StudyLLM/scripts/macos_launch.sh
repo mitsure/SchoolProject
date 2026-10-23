@@ -62,8 +62,11 @@ case "$mode" in
         echo "GitHubから更新を取得しています…"
         repo_dir="$(git rev-parse --show-toplevel)"
         [ "$(git branch --show-current)" = main ] || fail "main以外のブランチです。更新を停止します。"
-        [ -z "$(git status --porcelain)" ] || fail "未保存のGit変更があります。変更を確認してから更新してください。"
-        git -C "$repo_dir" pull --ff-only origin main
+        # Git allows unrelated local files and rejects overlapping changes.
+        # Do not auto-stash credentials, local data, or user edits.
+        if ! git -C "$repo_dir" pull --ff-only --no-rebase --no-autostash origin main; then
+            fail "更新を停止しました。上のGitエラーを確認してください。競合する変更の自動退避・削除は行いません。"
+        fi
         git log -1 --oneline
         # Run the freshly downloaded version of this script.
         exec bash "$project_dir/scripts/macos_launch.sh" updated

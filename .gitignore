@@ -8,6 +8,7 @@ SportDent/CreateData/RegenerationBackups/
 # Pythonの一時生成物
 __pycache__/
 *.pyc
+SportDent/StudyLLM/.venv/
 SportDent/StudyLLM/data/*.sqlite3
 SportDent/StudyLLM/data/
 SportDent/StudyLLM/.env
