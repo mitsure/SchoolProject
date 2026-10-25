@@ -91,16 +91,48 @@ app_label="jp.sportdent.studyllm"
 app_plist="$HOME/Library/LaunchAgents/$app_label.plist"
 app_err_offset="$(log_size logs/studyllm.err.log)"
 app_out_offset="$(log_size logs/studyllm.out.log)"
+fallback_pid=""
+app_reused=0
 echo "StudyLLMを起動しています…"
-if ! launchctl print "gui/$user_id/$app_label" >/dev/null 2>&1; then
-    [ -f "$app_plist" ] || fail "StudyLLMの自動起動設定がありません。手順書の初回設定を行ってください。"
-    launchctl bootstrap "gui/$user_id" "$app_plist"
+if curl --noproxy '*' --fail --silent --max-time 2 http://127.0.0.1:8000 >/dev/null; then
+    if [ "$mode" = start ]; then
+        app_reused=1
+        echo "既に起動しているStudyLLMを使用します。"
+    elif ! launchctl print "gui/$user_id/$app_label" 2>/dev/null \
+        | grep -Eq '^[[:space:]]*state = running[[:space:]]*$'; then
+        fail "更新は取得しました。手動起動中のターミナルでControl + Cを押して終了し、起動.commandを実行してください。"
+    fi
 fi
-launchctl kickstart -k "gui/$user_id/$app_label"
-if ! wait_http http://127.0.0.1:8000; then
-    echo "StudyLLMの起動確認に失敗しました。今回の接続状態とログ："
-    show_app_diagnostics
-    fail "ここまでのエラーを確認してください。"
+if [ "$app_reused" -eq 0 ]; then
+    if ! launchctl print "gui/$user_id/$app_label" >/dev/null 2>&1; then
+        [ -f "$app_plist" ] || fail "StudyLLMの自動起動設定がありません。手順書の初回設定を行ってください。"
+        launchctl bootstrap "gui/$user_id" "$app_plist"
+    fi
+    launchctl kickstart -k "gui/$user_id/$app_label"
+    if ! wait_http http://127.0.0.1:8000; then
+        echo "StudyLLMの起動確認に失敗しました。今回の接続状態とログ："
+        show_app_diagnostics
+        if ! launchctl print "gui/$user_id/$app_label" 2>/dev/null \
+            | grep -Eq '^[[:space:]]*last exit code = 78(:|[[:space:]]|$)'; then
+            fail "ここまでのエラーを確認してください。"
+        fi
+        echo "自動起動サービスがEX_CONFIGで停止しています。ターミナルから直接起動します。"
+        # Stop this exact service so KeepAlive cannot race the foreground server.
+        launchctl bootout "gui/$user_id/$app_label" || fail "サービスを停止できませんでした。"
+        cleanup_fallback() {
+            if [ -n "$fallback_pid" ]; then
+                kill "$fallback_pid" 2>/dev/null || true
+                wait "$fallback_pid" 2>/dev/null || true
+            fi
+        }
+        trap cleanup_fallback EXIT
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        trap 'exit 129' HUP
+        .venv/bin/python run.py &
+        fallback_pid=$!
+        wait_http http://127.0.0.1:8000 || fail "直接起動にも失敗しました。上に表示されたPythonのエラーを確認してください。"
+    fi
 fi
 
 echo "公開接続を確認しています…"
@@ -137,4 +169,16 @@ done
 [ -n "$public_url" ] || fail "8000番への公開URLを取得できません。http://127.0.0.1:4040 を確認してください。"
 open "$public_url"
 echo "起動確認が完了しました。公開URL：$public_url"
+if [ -n "$fallback_pid" ]; then
+    echo "直接起動で動作中です。利用中はこのターミナルを開いたままにしてください。"
+    echo "終了するときはControl + Cを押してください。Macのスリープ中は利用できません。"
+    fallback_status=0
+    wait "$fallback_pid" || fallback_status=$?
+    fallback_pid=""
+    exit "$fallback_status"
+fi
+if [ "$app_reused" -eq 1 ]; then
+    echo "この画面は閉じて構いません。別のターミナルで起動中の場合は、そのターミナルを開いたままにしてください。"
+    exit 0
+fi
 echo "このターミナルを閉じてもアプリは動き続けます。Macのスリープ中は利用できません。"
